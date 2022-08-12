@@ -1,0 +1,17 @@
+# System File
+.DS_Store
+__MACOSX
+Thumbs.db
+
+# Node.js
+node_modules/
+
+# VSCode Plugin
+.history/
+
+# Environment File
+.envrc
+
+# Working Directory
+.slack/
+.migrations/

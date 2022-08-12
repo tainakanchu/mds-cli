@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "davidanson.vscode-markdownlint",
+    "bierner.markdown-preview-github-styles",
+    "gruntfuggly.todo-tree",
+    "shardulm94.trailing-spaces",
+    "xabikos.javascriptsnippets",
+    "codeandstuff.package-json-upgrade",
+    "VisualStudioExptTeam.intellicode-api-usage-examples",
+    "GitHub.copilot",
+    "esbenp.prettier-vscode",
+  ],
+}
