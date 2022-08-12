@@ -57,7 +57,7 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <h3 id="create-discord-bot">DiscordBotの作成</h3>
 
-1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)などの記事を参考にBotを作成
+1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考にBotを作成
 2. Public Botのチェックを外し、Botを公開にしておく
 3. OAuth2 > URL GeneratorでSCOPESの項目には「Bot」を、Bot Permissionsの項目には「Send Messages」と「Manage Channels」にチェックを入れる
 4. GENERATED URLの項目で生成されたURLを開いて、移行先のサーバーにBotを追加する
@@ -67,7 +67,7 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <h3 id="export-slack-data">Slackのデータのエクスポート</h3>
 
-1. [Slackのデータのエクスポートのページ](https://slack.com/services/export)で、[ワークスペースのデータをエクスポートする](https://slack.com/intl/ja-jp/help/articles/201658943-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B)などの記事を参考に、**ワークスペースのオーナーもしくは管理者**がSlackのデータをエクスポートし、zipファイルをダウンロードする
+1. [Slackのデータのエクスポートのページ](https://slack.com/services/export)で、「[ワークスペースのデータをエクスポートする](https://slack.com/intl/ja-jp/help/articles/201658943-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B)」などの記事を参考に、**ワークスペースのオーナーもしくは管理者**がSlackのデータをエクスポートし、zipファイルをダウンロードする
 2. zipファイルを解凍し、解凍したフォルダを「.slack」にリネームしてこのリポジトリのトップに配置する
 
 <h3 id="setting-environment-variables">環境変数の設定</h3>
