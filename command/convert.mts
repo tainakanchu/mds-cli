@@ -1,14 +1,14 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
+import pc from "picocolors"
+import { writeFile, mkdir, readdir, rm } from "node:fs/promises"
+import { dirname, resolve, join } from "node:path"
+import { Spinner } from "../libs/util/spinner.mjs"
 import { getSlackChannels } from "../libs/slack/channel.mjs"
 import type { SlackChannel } from "../libs/slack/channel.mjs"
 import { getSlackMessages } from "../libs/slack/message.mjs"
 import { getSlackUsers } from "../libs/slack/user.mjs"
 import type { SlackUser } from "../libs/slack/user.mjs"
-import { Spinner } from "../libs/util/spinner.mjs"
-import pc from "picocolors"
-import { writeFile, mkdir, readdir, rm } from "node:fs/promises"
-import { dirname, resolve, join } from "node:path"
 
 const __dirname = new URL(import.meta.url).pathname
 const slackDirPath = resolve(__dirname, "../../.slack/")
@@ -20,7 +20,6 @@ const spinner = new Spinner()
 interface Options {
   discordToken?: string
   discordServerId?: string
-  slackToken?: string
   saveArchive?: boolean
 }
 
@@ -28,7 +27,7 @@ interface Options {
   const program = new Command()
 
   program
-    .description("App to transfer from slack to discord")
+    .description("Convert Slack channel messages")
     .option(
       "-dt, --discord-token [string]",
       "Discord Bot OAuth Token",
@@ -40,11 +39,6 @@ interface Options {
       process.env.DISCORD_SERVER_ID
     )
     .option(
-      "-st, --slack-token [string]",
-      "Slack Bot OAuth Token",
-      process.env.SLACK_TOKEN
-    )
-    .option(
       "-sa, --save-archive [boolean]",
       "Also save Slack archive channels",
       process.env.SAVE_ARCHIVE === "false" ? false : true
@@ -54,7 +48,7 @@ interface Options {
   // パラメーターの取得
   spinner.start(pc.blue("Parameter checking..."))
   const options: Options = program.opts()
-  const { discordToken, discordServerId, slackToken, saveArchive } = options
+  const { discordToken, discordServerId, saveArchive } = options
   let isFailed = false
   const errorMessages = []
 
@@ -66,16 +60,11 @@ interface Options {
     errorMessages.push("Discord Server Id is required")
     isFailed = true
   }
-  if (slackToken === undefined) {
-    errorMessages.push("Slack Bot OAuth Token Id is required")
-    isFailed = true
-  }
 
   if (
     isFailed ||
     discordToken === undefined ||
     discordServerId === undefined ||
-    slackToken === undefined ||
     saveArchive === undefined
   ) {
     spinner.stop(pc.blue("Parameter checking... " + pc.red("Failed")))
