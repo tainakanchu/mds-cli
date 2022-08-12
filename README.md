@@ -1,6 +1,7 @@
 # MSD
 
 SlackからDiscordにチャンネルのメッセージを移行するためのnode.jsのCLI  
+SlackのエクスポートデータをDiscordに移行できるデータに変換し、Discord Botがチャンネルの作成とメッセージの出力を行う  
 MSDは(Migrate from Slack to Discord)の略称  
 
 > **Warning**  
@@ -10,38 +11,50 @@ MSDは(Migrate from Slack to Discord)の略称
 
 ## 仕様
 
-SlackのエクスポートデータをDiscordに移行できるデータに変換し、DiscordBotがチャンネルの作成とメッセージの出力を行う仕様です
+### Slackのデータの取得
 
 下記の理由でメッセージの取得をSlack APIからではなく、エクスポートデータから参照する仕様となっています
 
 - メッセージの総数によってはAPIを叩く回数が膨大になり、データの完全性を保証しにくい
-- APIのクォータやレスポンスを考慮してページネーションで再起的にAPIを叩く必要があり、その処理やそれに伴うデータ取得失敗時のリトライ処理などの不安定になりそうな実装はできるだけ排除したい
+- APIのクォータやレスポンスを考慮してページネーションで再起的にAPIを叩く必要があり、その処理やそれに伴うデータ取得失敗時のリトライ処理などの不安定になりそうな実装をできるだけ排除したい
 - メッセージにユーザー名の情報が含まれない <span style="color:crimson;">※1</span>
 
 <span style="color:crimson;">※1</span> Slack APIの[conversations.history](https://api.slack.com/methods/conversations.history)で取得したメッセージは、ユーザー情報がユーザーIDのみで、ユーザー名が含まれず、取得するためのオプションが無いため、別途ユーザー名を取得する必要があります
 
-### 実現可能な事と実現不可な事
+### Discordへの移行設定のオプション
 
-#### 実現可能な事
+Discordへの移行する際のオプションとして、下記のオプションがあります
 
-このCLIでは、現在、下記の項目を実現可能です
+- メッセージ内のメンションなどに含まれるユーザ名の変更
+- 移行したPrivateチャンネルへのユーザーの自動join
 
-- Publicチャンネルのメッセージの移行
-- Privateチャンネルのメッセージの移行 <span style="color:crimson;">※1</span>
-- アーカイブされたチャンネルのメッセージの移行 <span style="color:crimson;">※2</span>
-- メッセージの添付ファイルの移行(WIP)
-- リプライされたメッセージの移行(WIP)
-- 移行したチャンネルへのユーザーの自動join(WIP)
+メッセージのデータを変換する前に、変換したユーザーのデータの`.migtation/user.json`のファイルに、DiscordのユーザーIDやユーザー名を手動で設定することで実行可能です
+
+### アーカイブチャンネルの移行
+
+Discordにはチャンネルのアーカイブ機能がないため、アーカイブされたチャンネルはARCHIVEカテゴリーにまとめる仕様となっています  
+それ以外のチャンネルはCHANNELカテゴリーにまとめる仕様となっています  
+
+## 実現可能な事と実現不可な事
+
+### 実現可能な事
+
+- Public/Privateチャンネルのメッセージの移行 <span style="color:crimson;">※1</span>
+- アーカイブされたチャンネルのメッセージの移行
+- メッセージの添付ファイルの移行
+- リプライされたメッセージの移行
+- 移行するメッセージ内のメンションなどに含まれるユーザ名の変更　<span style="color:crimson;">※2</span>
+- 移行するPrivateチャンネルへのユーザーの自動join　<span style="color:crimson;">※3</span>
 
 <span style="color:crimson;">※1</span> Slackのビジネスプラス以上のプランでのみ、Privateチャンネルを含めた全てのチャンネルのエクスポートが可能です  
 Slackは[後からPrivateチャンネル→Publicチャンネルに変更できない](https://slack.com/intl/ja-jp/help/articles/213185467-%E3%83%81%E3%83%A3%E3%83%B3%E3%83%8D%E3%83%AB%E3%82%92%E3%83%97%E3%83%A9%E3%82%A4%E3%83%99%E3%83%BC%E3%83%88%E3%83%81%E3%83%A3%E3%83%B3%E3%83%8D%E3%83%AB%E3%81%AB%E5%A4%89%E6%8F%9B%E3%81%99%E3%82%8B)ため、実質的にSlackのプロ以下のプランではPrivateチャンネルのエクスポートができません  
 Privateチャンネルを含めた全てのチャンネルのエクスポートを行うためには、[ワークスペースのオーナーもしくは管理者の権限が必要](https://slack.com/intl/ja-jp/help/articles/204897248-Slack-%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88-%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%AE%E6%89%8B%E6%AE%B5)です  
 
-<span style="color:crimson;">※2</span> Discordにはチャンネルのアーカイブ機能がないため、アーカイブされたチャンネルはARCHIVEカテゴリーにまとめるように実装しています
+<span style="color:crimson;">※2</span> `.migtation/user.json`のファイルに、Discordのユーザー名を手動で設定する必要があります
 
-#### 実現不可な事
+<span style="color:crimson;">※3</span> `.migtation/user.json`のファイルに、DiscordのユーザーIDを手動で設定する必要があります
 
-また、現在、下記の項目は実現不可になります
+### 実現不可な事
 
 - SlackBotの移行
 - DM(ダイレクトメッセージ)の移行
@@ -50,12 +63,12 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 1. [direnvのインストール](https://github.com/direnv/direnv)
 2. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
-3. [DiscordBotの作成](#create-discord-bot)
+3. [Discord Botの作成](#create-discord-bot)
 4. [Slackのデータのエクスポート](#export-slack-data)
 5. [環境変数の設定](#setting-environment-variables)
 6. [実行環境の設定](#setting-execution-environment)
 
-<h3 id="create-discord-bot">DiscordBotの作成</h3>
+<h3 id="create-discord-bot">Discord Botの作成</h3>
 
 1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考にBotを作成
 2. Public Botのチェックを外し、Botを公開にしておく
@@ -82,7 +95,7 @@ cp .envrc.sample .envrc
 
 ```zsh
 export NODE_OPTIONS=--openssl-legacy-provider
-export DISCORD_TOKEN="" # ← DiscordBotのトークンを設定
+export DISCORD_BOT_TOKEN="" # ← Discord Botのトークンを設定
 export DISCORD_SERVER_ID=""　# ← DiscordのサーバーIDを設定
 ```
 
@@ -112,13 +125,41 @@ npm install
 
 ## 使用方法
 
-下記のコマンドを順次実行する
+最初に下記のコマンドを順次実行し、Discordに移行するユーザーのデータファイルを作成する  
 
 ```zsh
-# SlackのエクスポートデータをDiscordに移行できるデータに変換する
-npm run convert
+# 作業ディレクトリ初期化などの初期化処理をする
+npm run init
 
-# Discordにデータを移行する(WIP)
+# Slackのユーザーのデータファイルを、Discordに移行できるデータファイルに変換する
+npm run convert:user
+```
+
+次にメッセージ内のメンションなどに含まれるユーザ名の変更、移行したPrivateチャンネルへのユーザーの自動joinをしたい場合は、  
+任意で移行するユーザーのデータファイル`.migtation/user.json`に対象の各ユーザーのユーザー名、ユーザーIDを設定する  
+
+```json
+{
+  "slack": {
+    "user_id": "U02XXXXXXXX",
+    "username": "Slackのユーザー名",
+    "deleted": false,
+    "is_bot": false
+  },
+  "discord": {
+    "user_id": "", // ← DiscordのユーザーIDを設定
+    "username": "" // ← Discordのユーザー名を設定
+  }
+}
+```
+
+最後に下記のコマンドを順次実行し、Discordに移行するメッセージのデータファイルの作成と移行を行う  
+
+```zsh
+# Slackのメッセージのデータファイルを、Discordに移行するデータファイルに変換する
+npm run convert:message
+
+# Discordにデータを移行する
 # npm run migration
 ```
 

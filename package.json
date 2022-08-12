@@ -6,7 +6,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "convert": "node --loader ts-node/esm ./command/convert.mts"
+    "init": "node --loader ts-node/esm ./command/init.mts",
+    "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
+    "convert:message": "node --loader ts-node/esm ./command/convert/message.mts"
   },
   "volta": {
     "node": "18.7.0",

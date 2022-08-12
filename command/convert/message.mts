@@ -1,18 +1,18 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import pc from "picocolors"
-import { writeFile, mkdir, readdir, rm } from "node:fs/promises"
+import { writeFile, mkdir, readdir } from "node:fs/promises"
 import { dirname, resolve, join } from "node:path"
-import { Spinner } from "../libs/util/spinner.mjs"
-import { getSlackChannels } from "../libs/slack/channel.mjs"
-import type { SlackChannel } from "../libs/slack/channel.mjs"
-import { getSlackMessages } from "../libs/slack/message.mjs"
-import { getSlackUsers } from "../libs/slack/user.mjs"
-import type { SlackUser } from "../libs/slack/user.mjs"
+import { Spinner } from "../../libs/util/spinner.mjs"
+import { getSlackChannels } from "../../libs/slack/channel.mjs"
+import type { SlackChannel } from "../../libs/slack/channel.mjs"
+import { getSlackMessages } from "../../libs/slack/message.mjs"
+import { getUsers } from "../../libs/common/user.mjs"
+import type { User } from "../../libs/common/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const slackDirPath = resolve(__dirname, "../../.slack/")
-const migrationDirPath = resolve(__dirname, "../../.migrations/")
+const slackDirPath = resolve(__dirname, "../../../.slack/")
+const migrationDirPath = resolve(__dirname, "../../../.migration/")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -25,13 +25,12 @@ interface Options {
 
 ;(async () => {
   const program = new Command()
-
   program
-    .description("Convert Slack channel messages")
+    .description("Convert slack messages file")
     .option(
-      "-dt, --discord-token [string]",
+      "-dt, --discord-bot-token [string]",
       "Discord Bot OAuth Token",
-      process.env.DISCORD_TOKEN
+      process.env.DISCORD_BOT_TOKEN
     )
     .option(
       "-ds, --discord-server-id [string]",
@@ -73,24 +72,6 @@ interface Options {
   }
   spinner.stop(pc.blue("Parameter checking... " + pc.green("Success")))
 
-  // ディレクトリ初期化
-  spinner.start(pc.blue("Initializing working directory..."))
-  try {
-    await rm(migrationDirPath, { recursive: true })
-    await mkdir(dirname(migrationDirPath), {
-      recursive: true,
-    })
-  } catch (error) {
-    spinner.stop(
-      pc.blue("Initializing working directory... " + pc.red("Failed"))
-    )
-    console.error(error)
-    process.exit(0)
-  }
-  spinner.stop(
-    pc.blue("Initializing working directory... " + pc.green("Success"))
-  )
-
   // Slackのチャンネル情報を取得して変換する
   spinner.start(pc.blue("Converting slack channels file..."))
   const slackChannelsFilePath = join(slackDirPath, "channels.json")
@@ -119,14 +100,14 @@ interface Options {
   // Slackのユーザー名を取得して変換する
   spinner.start(pc.blue("Converting slack users file..."))
   const slackUsersFilePath = join(slackDirPath, "users.json")
-  const newSlackUsersFilePath = join(migrationDirPath, "slack/users.json")
-  let slackUsers: SlackUser[] = []
+  const newSlackUsersFilePath = join(migrationDirPath, "slack/user.json")
+  let users: User[] = []
   try {
-    slackUsers = await getSlackUsers(slackUsersFilePath)
+    users = await getUsers(slackUsersFilePath)
     await mkdir(dirname(newSlackUsersFilePath), {
       recursive: true,
     })
-    await writeFile(newSlackUsersFilePath, JSON.stringify(slackUsers, null, 2))
+    await writeFile(newSlackUsersFilePath, JSON.stringify(users, null, 2))
   } catch (error) {
     spinner.stop(pc.blue("Converting slack users file... " + pc.red("Failed")))
     console.error(error)
@@ -148,14 +129,11 @@ interface Options {
         )
         const newMessageFilePath = join(
           migrationDirPath,
-          "slack/messages",
+          "slack/message",
           channel.name,
           messageFileName
         )
-        const slackMessages = await getSlackMessages(
-          messageFilePath,
-          slackUsers
-        )
+        const slackMessages = await getSlackMessages(messageFilePath, users)
         await mkdir(dirname(newMessageFilePath), {
           recursive: true,
         })

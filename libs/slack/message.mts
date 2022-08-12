@@ -3,7 +3,7 @@ import { access, readFile } from "node:fs/promises"
 // https://github.com/nodejs/node/issues/44209
 import { constants } from "node:fs"
 import { Message } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import type { SlackUser } from "./user.mjs"
+import type { User } from "../common/user.mjs"
 
 export interface SlackMessage extends Message {
   type: string | "message"
@@ -21,10 +21,7 @@ export interface SlackMessage extends Message {
   timestamp: string
 }
 
-export const getSlackMessages = async (
-  filePath: string,
-  users: SlackUser[]
-) => {
+export const getSlackMessages = async (filePath: string, users: User[]) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")
   const messages: SlackMessage[] = JSON.parse(messageFile).map(
@@ -32,14 +29,14 @@ export const getSlackMessages = async (
       let text = message.text ? message.text : ""
 
       // テキスト内のメンションをユーザー名もしくはBot名に置換する
-      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
-        for (const user of users) {
-          text = text.replaceAll(
-            new RegExp(`<@${user.id}>`, "g"),
-            `@${user.name}`
-          )
-        }
-      }
+      // if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
+      //   for (const user of users) {
+      //     text = text.replaceAll(
+      //       new RegExp(`<@${user.id}>`, "g"),
+      //       `@${user.name}`
+      //     )
+      //   }
+      // }
 
       // TODO: 添付ファイルのダウンロード処理を書く
       return {
