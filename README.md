@@ -57,17 +57,17 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <h3 id="create-discord-bot">DiscordBotの作成</h3>
 
-1. [Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)などの記事を参考に、[DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)でBotを作成
+1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)などの記事を参考にBotを作成
 2. Public Botのチェックを外し、Botを公開にしておく
 3. OAuth2 > URL GeneratorでSCOPESの項目には「Bot」を、Bot Permissionsの項目には「Send Messages」と「Manage Channels」にチェックを入れる
 4. GENERATED URLの項目で生成されたURLを開いて、移行先のサーバーにBotを追加する
 5. Bot > Build A Botの項目からトークンを控えておく
-6. DiscordのサーバーIDを表示させるために、Discordのアプリの設定 > 詳細設定で開発者モードを有効化にする
-7. サーバーを右クリックで表示される「IDをコピー」の項目をクリックしてDiscordのサーバーIDを控えておく
+6. Discordのアプリで、DiscordのサーバーIDを表示させるために、Discordのアプリの設定 > 詳細設定で開発者モードを有効化にする
+7. Discordのアプリで、サーバーを右クリックで表示される「IDをコピー」の項目をクリックしてDiscordのサーバーIDを控えておく
 
 <h3 id="export-slack-data">Slackのデータのエクスポート</h3>
 
-1. [ワークスペースのデータをエクスポートする](https://slack.com/intl/ja-jp/help/articles/201658943-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B)の記事を参考に、**ワークスペースのオーナーもしくは管理者**がSlackのデータをエクスポートし、zipファイルをダウンロードする
+1. [Slackのデータのエクスポートのページ](https://slack.com/services/export)で、[ワークスペースのデータをエクスポートする](https://slack.com/intl/ja-jp/help/articles/201658943-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B)などの記事を参考に、**ワークスペースのオーナーもしくは管理者**がSlackのデータをエクスポートし、zipファイルをダウンロードする
 2. zipファイルを解凍し、解凍したフォルダを「.slack」にリネームしてこのリポジトリのトップに配置する
 
 <h3 id="setting-environment-variables">環境変数の設定</h3>
@@ -97,7 +97,7 @@ direnv allow
 下記のコマンドで、VoltaでNode.jsとnpmを設定する
 
 ```zsh
-volta install node@18.7.1 npm@8.15.1
+volta install node@18.7.0 npm@8.15.1
 
 npm install
 ```
