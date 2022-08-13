@@ -23,7 +23,25 @@ export const getMessages = async (filePath: string, users: User[]) => {
   const messageFile = await readFile(filePath, "utf8")
   const messages: SlackMessage[] = JSON.parse(messageFile).map(
     (message: SlackMessage) => {
-      let text = message.text ? message.text : ""
+      // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
+      let text = "------------------------------------------------\n"
+
+      // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
+      const user = users.find((user) => user.slack.user_id === message.user)
+      const userName = message.user && user ? user.discord.user_name : ""
+      const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
+      const timestamp = message.ts
+        ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
+        : ""
+      text += `${icon}  **${userName}**  ${timestamp}\n`
+
+      // TODO: ここに添付ファイルのダウンロード処理を書く
+
+      // TODO: ここにサブタイプに応じて必要なら処理を書く
+      // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
+
+      // テキストにメッセージ内容を追加
+      text += message.text
 
       // テキスト内のメンションをユーザー名もしくはBot名に置換
       if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
@@ -35,23 +53,6 @@ export const getMessages = async (filePath: string, users: User[]) => {
           )
         }
       }
-
-      // テキストの最初に絵文字アイコンとユーザー名とタイムスタンプを追加
-      const user = users.find((user) => user.slack.user_id === message.user)
-      const userName = message.user && user ? user.discord.user_name : ""
-      const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
-      const timestamp = message.ts
-        ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
-        : ""
-      text = `${icon}  **${userName}**  ${timestamp}\n` + text
-
-      // TODO: ここに添付ファイルのダウンロード処理を書く
-
-      // TODO: ここにサブタイプに応じて必要なら処理を書く
-      // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
-
-      // チャットの区切りが見やすいように切り取り線をテキストの最後に追加
-      // text += "\n------------------------------------------------"
 
       return {
         message_id: "",
