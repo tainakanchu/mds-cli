@@ -100,6 +100,7 @@ cp .envrc.sample .envrc
 
 ```zsh
 export NODE_OPTIONS=--openssl-legacy-provider
+export IS_MIGRATE_ARCHIVE="true" # ← アーカイブされたチャンネルを移行しない場合はfalseを設定
 export DISCORD_BOT_TOKEN="" # ← Discord Botのトークンを設定
 export DISCORD_SERVER_ID=""　# ← DiscordのサーバーIDを設定
 ```
@@ -165,7 +166,13 @@ npm run convert:user
 npm run convert:message
 
 # Discordにデータを移行する
-# npm run migration
+npm run deploy
+```
+
+Discordへメッセージのデータの移行に失敗した場合は、下記のコマンドを実行することでリセットできる  
+
+```zsh
+npm run destroy
 ```
 
 ## 参考リンク

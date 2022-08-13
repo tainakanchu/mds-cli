@@ -38,33 +38,59 @@ export const getChannels = async (filePath: string) => {
   return channels
 }
 
-export const createDiscordChannels = async (
-  discordToken: string,
+export const createChannels = async (
+  discordBotToken: string,
   discordServerId: string,
   channels: Channel[],
-  saveArchive: boolean
+  isMigrateArchive: boolean
 ) => {
   const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
   })
-  await client.login(discordToken)
+  await client.login(discordBotToken)
 
-  let parentId: string | undefined = undefined
-  if (saveArchive) {
-    const result = await client.guilds.cache
+  // デフォルトのチャンネルのカテゴリーを作成する
+  let defaultCategoryId: string | undefined = undefined
+  const defaultCategory = await client.guilds.cache
+    .get(discordServerId)
+    ?.channels.create({
+      name: "CHANNEL",
+      type: ChannelType.GuildCategory,
+    })
+  if (defaultCategory?.id) {
+    defaultCategoryId = defaultCategory.id
+  }
+
+  // アーカイブされたチャンネルのカテゴリーを作成する
+  let archiveCategoryId: string | undefined = undefined
+  if (isMigrateArchive) {
+    const archiveCategory = await client.guilds.cache
       .get(discordServerId)
       ?.channels.create({
         name: "ARCHIVE",
         type: ChannelType.GuildCategory,
       })
-    parentId = result?.id
+    if (archiveCategory?.id) {
+      archiveCategoryId = archiveCategory.id
+    }
   }
 
+  // TODO: ここにカテゴリー情報をファイルに保存する処理を書く
+
   for (const channel of channels) {
-    await client.guilds.cache.get(discordServerId)?.channels.create({
-      name: channel.discord.channel_name,
-      type: ChannelType.GuildText,
-      parent: channel.slack.is_archived ? parentId : undefined,
-    })
+    if (!channel.slack.is_archived || isMigrateArchive) {
+      // チャンネルを作成する
+      const newChannel = await client.guilds.cache
+        .get(discordServerId)
+        ?.channels.create({
+          name: channel.discord.channel_name,
+          type: ChannelType.GuildText,
+          parent: channel.slack.is_archived
+            ? archiveCategoryId
+            : defaultCategoryId,
+        })
+
+      // TODO:ここに作成したチャンネル情報をファイルに追加する処理を書く
+    }
   }
 }
