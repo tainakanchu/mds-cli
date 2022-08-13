@@ -13,7 +13,6 @@ export interface Message {
 
 /**
  * Get message infomation
- * メッセージ情報を取得する
  * @param filePath
  * @param users
  * @returns Message[]

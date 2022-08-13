@@ -7,7 +7,6 @@ export interface Category {
 
 /**
  * Create category
- * カテゴリーを作成する
  * @param discordBotToken
  * @param discordServerId
  * @param categories
@@ -38,7 +37,6 @@ export const createCategories = async (
 
 /**
  * Delete category
- * カテゴリーを削除する
  * @param discordBotToken
  * @param discordServerId
  * @param categories

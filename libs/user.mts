@@ -18,7 +18,6 @@ export interface User {
 
 /**
  * Get user infomation
- * ユーザー情報を取得する
  * @param filePath
  * @returns User[]
  */

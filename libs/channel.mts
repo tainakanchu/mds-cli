@@ -21,7 +21,6 @@ export interface Channel {
 
 /**
  * Get channel information
- * チャンネル情報を取得する
  * @param filePath
  * @returns Channel[]
  */
@@ -46,7 +45,6 @@ export const getChannels = async (filePath: string) => {
 
 /**
  * Create channel
- * チャンネルを作成する
  * @param discordBotToken
  * @param discordServerId
  * @param channels
@@ -95,7 +93,6 @@ export const createChannels = async (
 
 /**
  * Delete channel
- * チャンネルを削除する
  * @param discordBotToken
  * @param discordServerId
  * @param channels
