@@ -6,9 +6,9 @@ import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createChannels } from "../../libs/channel.mjs"
+import { deleteChannels } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { createCategories } from "../../libs/category.mjs"
+import { deleteCategories } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -22,13 +22,12 @@ const spinner = new Spinner()
 interface Options {
   discordBotToken?: string
   discordServerId?: string
-  isMigrateArchive?: boolean
 }
 
 ;(async () => {
   const program = new Command()
   program
-    .description("Deploy channel")
+    .description("Delete channel")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "Discord bot oauth token",
@@ -39,17 +38,12 @@ interface Options {
       "Discord server id",
       process.env.DISCORD_SERVER_ID
     )
-    .requiredOption(
-      "-ma, --is-migrate-archive [boolean]",
-      "Whether to migrate archive channel",
-      process.env.IS_MIGRATE_ARCHIVE === "false" ? false : true
-    )
     .parse(process.argv)
 
   // パラメーターの取得
   spinner.start(pc.blue("Checking parameters..."))
   const options: Options = program.opts()
-  const { discordBotToken, discordServerId, isMigrateArchive } = options
+  const { discordBotToken, discordServerId } = options
   let isFailed = false
   const errorMessages = []
 
@@ -65,8 +59,7 @@ interface Options {
   if (
     isFailed ||
     discordBotToken === undefined ||
-    discordServerId === undefined ||
-    isMigrateArchive === undefined
+    discordServerId === undefined
   ) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
     console.error(pc.red(errorMessages.join("\n")))
@@ -87,64 +80,36 @@ interface Options {
   }
   spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
 
-  // Discordのチャンネルのカテゴリーを作成する
-  spinner.start(pc.blue("Creating category..."))
-  let newCategories: Category[] = []
-  let defaultCategory: Category | undefined = undefined
-  let archiveCategory: Category | undefined = undefined
+  // カテゴリー情報を取得する
+  spinner.start(pc.blue("Getting category file..."))
+  let categories: Category[] = []
   try {
-    newCategories = await createCategories(discordBotToken, discordServerId, [
-      { id: "", name: "CHANNEL" },
-      { id: "", name: "ARCHIVE" },
-    ])
-    defaultCategory = newCategories.find(
-      (category) => category.name === "CHANNEL"
-    )
-    archiveCategory = newCategories.find(
-      (category) => category.name === "ARCHIVE"
-    )
-    if (!defaultCategory || !archiveCategory) {
-      throw new Error("Category is not found")
-    }
+    await access(categoryFilePath, constants.R_OK)
+    categories = JSON.parse(
+      await readFile(categoryFilePath, "utf8")
+    ) as Category[]
   } catch (error) {
-    spinner.stop(pc.blue("Creating category... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting category file... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Creating category... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting category file... " + pc.green("Success")))
 
-  // カテゴリー情報のファイルを作成する
-  spinner.start(pc.blue("Creating category file..."))
-  try {
-    await mkdir(dirname(categoryFilePath), {
-      recursive: true,
-    })
-    await writeFile(categoryFilePath, JSON.stringify(newCategories, null, 2))
-  } catch (error) {
-    spinner.stop(pc.blue("Creating category file... " + pc.red("Failed")))
-    console.error(error)
-    process.exit(0)
-  }
-  spinner.stop(pc.blue("Creating category file... " + pc.green("Success")))
-
-  // Discordのチャンネルを作成する
-  spinner.start(pc.blue("Creating channel..."))
+  // Discordのチャンネルを削除する
+  spinner.start(pc.blue("Deleting channel..."))
   let newChannels: Channel[] = []
   try {
-    newChannels = await createChannels(
+    newChannels = await deleteChannels(
       discordBotToken,
       discordServerId,
-      channels,
-      defaultCategory,
-      archiveCategory,
-      isMigrateArchive
+      channels
     )
   } catch (error) {
-    spinner.stop(pc.blue("Creating channel... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Deleting channel... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Creating channel... " + pc.green("Success")))
+  spinner.stop(pc.blue("Deleting channel... " + pc.green("Success")))
 
   // チャンネル情報を更新する
   spinner.start(pc.blue("Updating channel file..."))
@@ -159,6 +124,36 @@ interface Options {
     process.exit(0)
   }
   spinner.stop(pc.blue("Updating channel file... " + pc.green("Success")))
+
+  // Discordのカテゴリーを削除する
+  spinner.start(pc.blue("Deleting category..."))
+  let newCategories: Category[] = []
+  try {
+    newCategories = await deleteCategories(
+      discordBotToken,
+      discordServerId,
+      categories
+    )
+  } catch (error) {
+    spinner.stop(pc.blue("Deleting category... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Deleting category... " + pc.green("Success")))
+
+  // カテゴリー情報のファイルを更新する
+  spinner.start(pc.blue("Updating category file..."))
+  try {
+    await mkdir(dirname(categoryFilePath), {
+      recursive: true,
+    })
+    await writeFile(categoryFilePath, JSON.stringify(newCategories, null, 2))
+  } catch (error) {
+    spinner.stop(pc.blue("Updating category file... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Updating category file... " + pc.green("Success")))
 
   process.exit(0)
 })()

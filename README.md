@@ -76,7 +76,7 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <h3 id="create-discord-bot">Discord Botの作成</h3>
 
-1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考にBotを作成
+1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考に任意の名前のBotを作成
 2. Public Botのチェックを外し、Botを公開にしておく
 3. OAuth2 > URL GeneratorでSCOPESの項目には「Bot」を、Bot Permissionsの項目には「Send Messages」と「Manage Channels」にチェックを入れる
 4. GENERATED URLの項目で生成されたURLを開いて、移行先のサーバーにBotを追加する
@@ -177,7 +177,8 @@ npm run deploy:channel
 Discordへメッセージのデータの移行に失敗した場合は、下記のコマンドを実行することでリセットできる  
 
 ```zsh
-npm run destroy
+# 作成したDiscordのチャンネルを削除する
+npm run delete:channel
 ```
 
 ## 既知の問題

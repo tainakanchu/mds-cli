@@ -10,7 +10,8 @@
     "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
     "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
     "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
-    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts"
+    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
+    "delete:channel": "node --loader ts-node/esm ./command/delete/channel.mts"
   },
   "volta": {
     "node": "18.7.0",

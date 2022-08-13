@@ -15,6 +15,7 @@ export interface Channel {
   discord: {
     channel_id: string
     channel_name: string
+    topic: string
   }
 }
 
@@ -26,13 +27,12 @@ export const getChannels = async (filePath: string) => {
       channel_id: channel.id,
       channel_name: channel.name,
       is_archived: channel.is_archived,
-      purpose: channel.purpose?.value
-        ? channel.purpose.value.replaceAll("<http", "http").replaceAll(">", "")
-        : "",
+      purpose: channel.purpose?.value ? channel.purpose.value : "",
     },
     discord: {
       channel_id: "",
       channel_name: channel.name,
+      topic: channel.purpose?.value ? channel.purpose.value : "",
     },
   })) as Channel[]
   return channels
@@ -60,6 +60,7 @@ export const createChannels = async (
         ?.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
+          topic: channel.discord.topic ? channel.discord.topic : undefined,
           parent: channel.slack.is_archived
             ? archiveCategory.id
             : defaultCategory.id,
@@ -72,5 +73,28 @@ export const createChannels = async (
     }
   }
 
+  return newChannels
+}
+
+export const deleteChannels = async (
+  discordBotToken: string,
+  discordServerId: string,
+  channels: Channel[]
+) => {
+  const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
+  })
+  await client.login(discordBotToken)
+
+  const newChannels: Channel[] = []
+  for (const channel of channels) {
+    // チャンネルを削除する
+    await client.guilds.cache
+      .get(discordServerId)
+      ?.channels.delete(channel.discord.channel_id)
+    // チャンネルのIDを削除する
+    channel.discord.channel_id = ""
+    newChannels.push(channel)
+  }
   return newChannels
 }
