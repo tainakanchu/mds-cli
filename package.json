@@ -11,6 +11,7 @@
     "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
     "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
+    "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
     "delete:channel": "node --loader ts-node/esm ./command/delete/channel.mts"
   },
   "volta": {

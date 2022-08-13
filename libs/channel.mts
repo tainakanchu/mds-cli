@@ -1,9 +1,11 @@
 import { access, readFile } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
+import { join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
 import type { Category } from "./category.mjs"
+import { getMessageFilePaths } from "./message.mjs"
 
 export interface Channel {
   slack: {
@@ -16,31 +18,50 @@ export interface Channel {
     channel_id: string
     channel_name: string
     topic: string
+    message_file_paths: string[]
   }
 }
 
 /**
- * Get channel information
- * @param filePath
+ *  * Convert channel information
+ * @param channelFilePath
+ * @param messageDirPath
  * @returns Channel[]
  */
-export const getChannels = async (filePath: string) => {
-  await access(filePath, constants.R_OK)
-  const channelsFile = await readFile(filePath, "utf8")
-  const channels = JSON.parse(channelsFile).map((channel: SlackChannel) => ({
-    slack: {
-      channel_id: channel.id,
-      channel_name: channel.name,
-      is_archived: channel.is_archived,
-      purpose: channel.purpose?.value ? channel.purpose.value : "",
-    },
-    discord: {
-      channel_id: "",
-      channel_name: channel.name,
-      topic: channel.purpose?.value ? channel.purpose.value : "",
-    },
-  })) as Channel[]
-  return channels
+export const convertChannels = async (
+  channelFilePath: string,
+  messageDirPath: string
+) => {
+  await access(channelFilePath, constants.R_OK)
+  const slackChannels = JSON.parse(
+    await readFile(channelFilePath, "utf8")
+  ) as SlackChannel[]
+
+  const newChannels: Channel[] = []
+  for (const channel of slackChannels) {
+    if (channel.name) {
+      // メッセージファイルのパスを取得する
+      const messageFilePaths = await getMessageFilePaths(
+        join(messageDirPath, channel.name)
+      )
+
+      newChannels.push({
+        slack: {
+          channel_id: channel.id || "",
+          channel_name: channel.name || "",
+          is_archived: channel.is_archived || false,
+          purpose: channel.purpose?.value ? channel.purpose.value : "",
+        },
+        discord: {
+          channel_id: "",
+          channel_name: channel.name || "",
+          topic: channel.purpose?.value ? channel.purpose.value : "",
+          message_file_paths: messageFilePaths,
+        },
+      })
+    }
+  }
+  return newChannels
 }
 
 /**

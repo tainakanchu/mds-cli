@@ -6,7 +6,7 @@ import { writeFile, mkdir, readFile, access } from "node:fs/promises"
 import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { getChannels } from "../../libs/channel.mjs"
+import { convertChannels } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 import type { User } from "../../libs/user.mjs"
 
@@ -35,17 +35,18 @@ const spinner = new Spinner()
   }
   spinner.stop(pc.blue("Getting user file... " + pc.green("Success")))
 
-  // Slackのチャンネル情報を取得して変換する
+  // Slackのチャンネル情報を変換する
   spinner.start(pc.blue("Converting channel file..."))
   const slackChannelFilePath = join(slackDirPath, "channels.json")
   const newChannelFilePath = join(migrationDirPath, "channel.json")
-  let channels: Channel[] = []
+  const messageDirPath = join(migrationDirPath, "message")
+  let newChannels: Channel[] = []
   try {
-    channels = await getChannels(slackChannelFilePath)
+    newChannels = await convertChannels(slackChannelFilePath, messageDirPath)
     await mkdir(dirname(newChannelFilePath), {
       recursive: true,
     })
-    await writeFile(newChannelFilePath, JSON.stringify(channels, null, 2))
+    await writeFile(newChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
     spinner.stop(pc.blue("Converting channel file... " + pc.red("Failed")))
     console.error(error)

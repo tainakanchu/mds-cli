@@ -1,8 +1,9 @@
-import { access, readFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { access, readFile, readdir } from "node:fs/promises"
+import { statSync, constants } from "node:fs"
+import { join } from "node:path"
 import { fromUnixTime, format } from "date-fns"
 import { Message as SlackMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
+import { ChannelType, Guild } from "discord.js"
 import type { User } from "./user.mjs"
 
 export interface Message {
@@ -60,4 +61,48 @@ export const getMessages = async (filePath: string, users: User[]) => {
     }
   )
   return messages
+}
+
+/**
+ * Get message directory path
+ * @param messageDirPath
+ * @returns string[]
+ */
+export const getMessageFilePaths = async (messageDirPath: string) => {
+  const fileOrDirNames = await readdir(join(messageDirPath))
+  const messageFilePaths = fileOrDirNames
+    .filter(
+      (fileOrDirName) =>
+        // TODO: 非同期関数に置換する
+        statSync(join(messageDirPath, fileOrDirName)).isFile() &&
+        new RegExp(
+          /[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01]).json/g
+        ).test(fileOrDirName)
+    )
+    .map((fileOrDirName) => join(messageDirPath, fileOrDirName))
+  return messageFilePaths
+}
+
+/**
+ *  Create message
+ * @param guild
+ * @param channelId
+ * @param messages
+ * @returns Message[]
+ */
+export const createMessages = async (
+  guild: Guild,
+  channelId: string,
+  messages: Message[]
+) => {
+  const channelGuild = guild?.channels.cache.get(channelId)
+  const newMessages: Message[] = []
+  if (channelGuild && channelGuild.type === ChannelType.GuildText) {
+    for (const message of messages) {
+      const result = await channelGuild.send(message.text)
+      message.message_id = result.id
+      newMessages.push(message)
+    }
+  }
+  return newMessages
 }
