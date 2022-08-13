@@ -1,6 +1,5 @@
 import { access, readFile } from "node:fs/promises"
-// BUG: @types/nodeにfsPromises.constantsが無いので代用
-// https://github.com/nodejs/node/issues/44209
+// TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
 import { Member } from "@slack/web-api/dist/response/UsersListResponse"
 

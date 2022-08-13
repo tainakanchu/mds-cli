@@ -180,6 +180,15 @@ Discordへメッセージのデータの移行に失敗した場合は、下記�
 npm run destroy
 ```
 
+## 既知の問題
+
+### @types/nodeにfsPromise.constantsが無い
+
+下記のissueで修正反映待ち中  
+修正反映まではfs.constantsで代用  
+
+https://github.com/DefinitelyTyped/DefinitelyTyped/pull/61690
+
 ## 参考リンク
 
 - [discord.js](https://discord.js.org/)

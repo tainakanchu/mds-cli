@@ -2,8 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import pc from "picocolors"
 import { readFile, access, mkdir, writeFile } from "node:fs/promises"
-// BUG: @types/nodeにfsPromises.constantsが無いので代用
-// https://github.com/nodejs/node/issues/44209
+// TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
