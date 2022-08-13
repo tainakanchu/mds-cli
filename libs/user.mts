@@ -17,11 +17,11 @@ export interface User {
 }
 
 /**
- * Get user infomation
+ * Convert user
  * @param filePath
  * @returns User[]
  */
-export const getUsers = async (filePath: string) => {
+export const convertUsers = async (filePath: string) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")
   const users = JSON.parse(usersFile).map((member: Member) => {

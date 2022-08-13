@@ -4,7 +4,7 @@ import pc from "picocolors"
 import { writeFile, mkdir } from "node:fs/promises"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { getUsers } from "../../libs/user.mjs"
+import { convertUsers } from "../../libs/user.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -18,13 +18,13 @@ const spinner = new Spinner()
   const program = new Command()
   program.description("Convert user file").parse(process.argv)
 
-  // Slackのユーザー名を取得して変換する
+  // Slackのユーザー名を変換する
   spinner.start(pc.blue("Converting user file..."))
   const slackUserFilePath = join(slackDirPath, "users.json")
   const newUserFilePath = join(migrationDirPath, "user.json")
   let users: User[] = []
   try {
-    users = await getUsers(slackUserFilePath)
+    users = await convertUsers(slackUserFilePath)
     await mkdir(dirname(newUserFilePath), {
       recursive: true,
     })

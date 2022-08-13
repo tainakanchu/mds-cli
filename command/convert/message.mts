@@ -7,7 +7,7 @@ import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { getMessages } from "../../libs/message.mjs"
+import { convertMessages } from "../../libs/message.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -49,7 +49,7 @@ const spinner = new Spinner()
   }
   spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
 
-  // Slackのメッセージを取得して変換する
+  // Slackのメッセージを変換する
   spinner.start(pc.blue("Converting message file..."))
   try {
     // TODO: Promise.allSettledなどで並列化する
@@ -69,7 +69,7 @@ const spinner = new Spinner()
           channel.slack.channel_name,
           messageFileName
         )
-        const messages = await getMessages(messageFilePath, users)
+        const messages = await convertMessages(messageFilePath, users)
         await mkdir(dirname(newMessageFilePath), {
           recursive: true,
         })

@@ -13,12 +13,12 @@ export interface Message {
 }
 
 /**
- * Get message infomation
+ * Convert message
  * @param filePath
  * @param users
  * @returns Message[]
  */
-export const getMessages = async (filePath: string, users: User[]) => {
+export const convertMessages = async (filePath: string, users: User[]) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")
   const messages: SlackMessage[] = JSON.parse(messageFile).map(
