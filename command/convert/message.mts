@@ -7,7 +7,6 @@ import { writeFile, mkdir, readdir, readFile, access } from "node:fs/promises"
 import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { getChannels } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 import { getMessages } from "../../libs/message.mjs"
 import type { User } from "../../libs/user.mjs"
@@ -15,6 +14,7 @@ import type { User } from "../../libs/user.mjs"
 const __dirname = new URL(import.meta.url).pathname
 const slackDirPath = resolve(__dirname, "../../../.slack/")
 const migrationDirPath = resolve(__dirname, "../../../.migration/")
+const channelFilePath = join(migrationDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -37,23 +37,18 @@ const spinner = new Spinner()
   }
   spinner.stop(pc.blue("Getting user file... " + pc.green("Success")))
 
-  // Slackのチャンネル情報を取得して変換する
-  spinner.start(pc.blue("Converting channel file..."))
-  const slackChannelFilePath = join(slackDirPath, "channels.json")
-  const newChannelFilePath = join(migrationDirPath, "channel.json")
+  // Slackのチャンネル情報を取得する
+  spinner.start(pc.blue("Getting channel file..."))
   let channels: Channel[] = []
   try {
-    channels = await getChannels(slackChannelFilePath)
-    await mkdir(dirname(newChannelFilePath), {
-      recursive: true,
-    })
-    await writeFile(newChannelFilePath, JSON.stringify(channels, null, 2))
+    await access(channelFilePath, constants.R_OK)
+    channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Converting channel file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting channel file... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Converting channel file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
 
   // Slackのメッセージを取得して変換する
   spinner.start(pc.blue("Converting message file..."))

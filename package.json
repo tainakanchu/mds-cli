@@ -8,6 +8,7 @@
   "scripts": {
     "init": "node --loader ts-node/esm ./command/init.mts",
     "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
+    "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
     "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts"
   },
