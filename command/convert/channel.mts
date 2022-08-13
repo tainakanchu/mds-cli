@@ -19,7 +19,7 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program.description("Convert message file").parse(process.argv)
+  program.description("Convert channel file").parse(process.argv)
 
   // ユーザー名を取得する
   spinner.start(pc.blue("Getting user file..."))
