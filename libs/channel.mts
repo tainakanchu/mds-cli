@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
+import { createCategories } from "./category.mjs"
 
 export interface Channel {
   slack: {
@@ -49,31 +50,11 @@ export const createChannels = async (
   })
   await client.login(discordBotToken)
 
-  // デフォルトのチャンネルのカテゴリーを作成する
-  let defaultCategoryId: string | undefined = undefined
-  const defaultCategory = await client.guilds.cache
-    .get(discordServerId)
-    ?.channels.create({
-      name: "CHANNEL",
-      type: ChannelType.GuildCategory,
-    })
-  if (defaultCategory?.id) {
-    defaultCategoryId = defaultCategory.id
-  }
-
-  // アーカイブされたチャンネルのカテゴリーを作成する
-  let archiveCategoryId: string | undefined = undefined
-  if (isMigrateArchive) {
-    const archiveCategory = await client.guilds.cache
-      .get(discordServerId)
-      ?.channels.create({
-        name: "ARCHIVE",
-        type: ChannelType.GuildCategory,
-      })
-    if (archiveCategory?.id) {
-      archiveCategoryId = archiveCategory.id
-    }
-  }
+  // チャンネルのカテゴリーを作成する
+  const categories = await createCategories(discordBotToken, discordServerId, [
+    { name: "CHANNEL" },
+    { name: "ARCHIVE" },
+  ])
 
   // TODO: ここにカテゴリー情報をファイルに保存する処理を書く
 
@@ -86,8 +67,8 @@ export const createChannels = async (
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           parent: channel.slack.is_archived
-            ? archiveCategoryId
-            : defaultCategoryId,
+            ? categories[1].id
+            : categories[0].id,
         })
 
       // TODO:ここに作成したチャンネル情報をファイルに追加する処理を書く

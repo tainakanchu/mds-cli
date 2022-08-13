@@ -159,14 +159,14 @@ npm run convert:user
 }
 ```
 
-最後に下記のコマンドを順次実行し、Discordに移行するメッセージのデータファイルの作成と移行を行う  
+最後に下記のコマンドを順次実行し、Discordへチャンネルの移行を行う  
 
 ```zsh
 # Slackのメッセージのデータファイルを、Discordに移行するデータファイルに変換する
 npm run convert:message
 
-# Discordにデータを移行する
-npm run deploy
+# Discordにチャンネルを作成する
+npm run deploy:channel
 ```
 
 Discordへメッセージのデータの移行に失敗した場合は、下記のコマンドを実行することでリセットできる  

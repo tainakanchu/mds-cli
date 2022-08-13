@@ -6,12 +6,12 @@ import { readFile, access } from "node:fs/promises"
 // https://github.com/nodejs/node/issues/44209
 import { constants } from "node:fs"
 import { resolve, join } from "node:path"
-import { Spinner } from "../libs/util/spinner.mjs"
-import { createChannels } from "../libs/channel.mjs"
-import type { Channel } from "../libs/channel.mjs"
+import { Spinner } from "../../libs/util/spinner.mjs"
+import { createChannels } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../.migration/")
+const migrationDirPath = resolve(__dirname, "../../../.migration/")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()

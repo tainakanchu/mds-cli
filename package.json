@@ -9,7 +9,7 @@
     "init": "node --loader ts-node/esm ./command/init.mts",
     "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
     "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
-    "deploy": "node --loader ts-node/esm ./command/deploy.mts"
+    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts"
   },
   "volta": {
     "node": "18.7.0",
