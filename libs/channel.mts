@@ -4,7 +4,7 @@ import { access, readFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
-import { createCategories } from "./category.mjs"
+import type { Category } from "./category.mjs"
 
 export interface Channel {
   slack: {
@@ -43,6 +43,8 @@ export const createChannels = async (
   discordBotToken: string,
   discordServerId: string,
   channels: Channel[],
+  defaultCategory: Category,
+  archiveCategory: Category,
   isMigrateArchive: boolean
 ) => {
   const client = new Client({
@@ -50,28 +52,26 @@ export const createChannels = async (
   })
   await client.login(discordBotToken)
 
-  // チャンネルのカテゴリーを作成する
-  const categories = await createCategories(discordBotToken, discordServerId, [
-    { name: "CHANNEL" },
-    { name: "ARCHIVE" },
-  ])
-
-  // TODO: ここにカテゴリー情報をファイルに保存する処理を書く
-
+  const newChannels: Channel[] = []
   for (const channel of channels) {
     if (!channel.slack.is_archived || isMigrateArchive) {
       // チャンネルを作成する
-      const newChannel = await client.guilds.cache
+      const result = await client.guilds.cache
         .get(discordServerId)
         ?.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           parent: channel.slack.is_archived
-            ? categories[1].id
-            : categories[0].id,
+            ? archiveCategory.id
+            : defaultCategory.id,
         })
-
-      // TODO:ここに作成したチャンネル情報をファイルに追加する処理を書く
+      // チャンネルのIDを更新する
+      if (result?.id) {
+        channel.discord.channel_id = result.id
+      }
+      newChannels.push(channel)
     }
   }
+
+  return newChannels
 }

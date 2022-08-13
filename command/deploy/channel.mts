@@ -1,17 +1,21 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import pc from "picocolors"
-import { readFile, access } from "node:fs/promises"
+import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 // BUG: @types/nodeにfsPromises.constantsが無いので代用
 // https://github.com/nodejs/node/issues/44209
 import { constants } from "node:fs"
-import { resolve, join } from "node:path"
+import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createChannels } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
+import { createCategories } from "../../libs/category.mjs"
+import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const migrationDirPath = resolve(__dirname, "../../../.migration/")
+const categoryFilePath = join(migrationDirPath, "category.json")
+const channelFilePath = join(migrationDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -73,7 +77,6 @@ interface Options {
 
   // チャンネル情報を取得する
   spinner.start(pc.blue("Getting channel file..."))
-  const channelFilePath = join(migrationDirPath, "channel.json")
   let channels: Channel[] = []
   try {
     await access(channelFilePath, constants.R_OK)
@@ -85,21 +88,74 @@ interface Options {
   }
   spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
 
-  // Discordのチャンネルを作成する
+  // Discordのチャンネルのカテゴリーを作成する
+  spinner.start(pc.blue("Creating category..."))
+  let categories: Category[] = []
+  let defaultCategory: Category | undefined = undefined
+  let archiveCategory: Category | undefined = undefined
   try {
-    spinner.start(pc.blue("Creating channel..."))
-    await createChannels(
+    categories = await createCategories(discordBotToken, discordServerId, [
+      { name: "CHANNEL" },
+      { name: "ARCHIVE" },
+    ])
+    defaultCategory = categories.find((category) => category.name === "CHANNEL")
+    archiveCategory = categories.find((category) => category.name === "ARCHIVE")
+    if (!defaultCategory || !archiveCategory) {
+      throw new Error("Category is not found")
+    }
+  } catch (error) {
+    spinner.stop(pc.blue("Creating category... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Creating category... " + pc.green("Success")))
+
+  // カテゴリー情報のファイルを作成する
+  spinner.start(pc.blue("Creating category file..."))
+  try {
+    await mkdir(dirname(categoryFilePath), {
+      recursive: true,
+    })
+    await writeFile(categoryFilePath, JSON.stringify(categories, null, 2))
+  } catch (error) {
+    spinner.stop(pc.blue("Creating category file... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Creating category file... " + pc.green("Success")))
+
+  // Discordのチャンネルを作成する
+  spinner.start(pc.blue("Creating channel..."))
+  let newChannels: Channel[] = []
+  try {
+    newChannels = await createChannels(
       discordBotToken,
       discordServerId,
       channels,
+      defaultCategory,
+      archiveCategory,
       isMigrateArchive
     )
-    spinner.stop(pc.blue("Creating channel... " + pc.green("Success")))
   } catch (error) {
     spinner.stop(pc.blue("Creating channel... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
+  spinner.stop(pc.blue("Creating channel... " + pc.green("Success")))
+
+  // チャンネル情報を更新する
+  spinner.start(pc.blue("Updating channel file..."))
+  try {
+    await mkdir(dirname(channelFilePath), {
+      recursive: true,
+    })
+    await writeFile(channelFilePath, JSON.stringify(newChannels, null, 2))
+  } catch (error) {
+    spinner.stop(pc.blue("Updating channel file... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Updating channel file... " + pc.green("Success")))
 
   process.exit(0)
 })()
