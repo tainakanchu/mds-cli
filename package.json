@@ -6,7 +6,12 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "convert": "node --loader ts-node/esm ./command/convert.mts"
+    "init": "node --loader ts-node/esm ./command/init.mts",
+    "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
+    "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
+    "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
+    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
+    "delete:channel": "node --loader ts-node/esm ./command/delete/channel.mts"
   },
   "volta": {
     "node": "18.7.0",
@@ -22,8 +27,8 @@
     "picocolors": "^1.0.0"
   },
   "devDependencies": {
-    "@types/node": "^18.7.2",
-    "esbuild": "^0.15.1",
+    "@types/node": "^18.7.3",
+    "esbuild": "^0.15.2",
     "npm-check-updates": "^16.0.5",
     "ts-node": "^10.9.1",
     "typescript": "^4.7.4"

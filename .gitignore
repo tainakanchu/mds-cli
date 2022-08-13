@@ -14,4 +14,4 @@ node_modules/
 
 # Working Directory
 .slack/
-.migrations/
+.migration/

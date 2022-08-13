@@ -1,3 +1,4 @@
 export NODE_OPTIONS=--openssl-legacy-provider
-export DISCORD_TOKEN=""
+export IS_MIGRATE_ARCHIVE="true"
+export DISCORD_BOT_TOKEN=""
 export DISCORD_SERVER_ID=""
