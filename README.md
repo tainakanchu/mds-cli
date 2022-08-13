@@ -35,6 +35,11 @@ Discordへの移行する際のオプションとして、下記のオプショ�
 Discordにはチャンネルのアーカイブ機能がないため、アーカイブされたチャンネルはARCHIVEカテゴリーにまとめる仕様となっています  
 それ以外のチャンネルはCHANNELカテゴリーにまとめる仕様となっています  
 
+### メッセージの形式
+
+メッセージの最初の行には絵文字アイコン、ユーザー名、投稿日の情報が含まれます  
+絵文字アイコンは「🤖」はBot、「🥶」は解約済みユーザー、「😃」はアクティブユーザーからのメッセージであることを示します  
+
 ## 実現可能な事と実現不可な事
 
 ### 実現可能な事
@@ -141,14 +146,14 @@ npm run convert:user
 ```json
 {
   "slack": {
-    "user_id": "U02XXXXXXXX",
-    "username": "Slackのユーザー名",
+    "user_id": "U00XXXXXXXX",
+    "user_name": "Slackのユーザー名",
     "deleted": false,
     "is_bot": false
   },
   "discord": {
     "user_id": "", // ← DiscordのユーザーIDを設定
-    "username": "" // ← Discordのユーザー名を設定
+    "user_name": "" // ← Discordのユーザー名を設定
   }
 }
 ```

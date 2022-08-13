@@ -1,4 +1,5 @@
 import { Command } from "commander"
+import dotenv from "dotenv"
 import pc from "picocolors"
 import { mkdir, rm } from "node:fs/promises"
 import { resolve } from "node:path"
@@ -7,6 +8,7 @@ import { Spinner } from "../libs/util/spinner.mjs"
 const __dirname = new URL(import.meta.url).pathname
 const migrationDirPath = resolve(__dirname, "../../.migration/")
 
+dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
 
 ;(async () => {

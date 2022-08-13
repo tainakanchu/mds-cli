@@ -7,13 +7,13 @@ import { Member } from "@slack/web-api/dist/response/UsersListResponse"
 export interface User {
   slack: {
     user_id: string
-    username: string
+    user_name: string
     deleted: boolean
     is_bot: boolean
   }
   discord: {
     user_id: string
-    username: string
+    user_name: string
   }
 }
 
@@ -21,7 +21,7 @@ export const getUsers = async (filePath: string) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")
   const users = JSON.parse(usersFile).map((member: Member) => {
-    const username = member.is_bot
+    const userName = member.is_bot
       ? member.name
       : member.profile?.display_name
       ? member.profile.display_name
@@ -30,13 +30,13 @@ export const getUsers = async (filePath: string) => {
     return {
       slack: {
         user_id: member.id,
-        username: username,
+        user_name: userName,
         deleted: member.deleted,
         is_bot: member.is_bot,
       },
       discord: {
         user_id: "",
-        username: username,
+        user_name: userName,
       },
     }
   }) as User[]

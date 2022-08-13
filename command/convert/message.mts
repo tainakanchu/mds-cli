@@ -1,14 +1,16 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import pc from "picocolors"
-import { writeFile, mkdir, readdir } from "node:fs/promises"
+import { writeFile, mkdir, readdir, readFile, access } from "node:fs/promises"
+// BUG: @types/nodeにfsPromises.constantsが無いので代用
+// https://github.com/nodejs/node/issues/44209
+import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { getSlackChannels } from "../../libs/slack/channel.mjs"
-import type { SlackChannel } from "../../libs/slack/channel.mjs"
-import { getSlackMessages } from "../../libs/slack/message.mjs"
-import { getUsers } from "../../libs/common/user.mjs"
-import type { User } from "../../libs/common/user.mjs"
+import { getChannels } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
+import { getMessages } from "../../libs/message.mjs"
+import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const slackDirPath = resolve(__dirname, "../../../.slack/")
@@ -18,7 +20,7 @@ dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
 
 interface Options {
-  discordToken?: string
+  discordBotToken?: string
   discordServerId?: string
   saveArchive?: boolean
 }
@@ -45,13 +47,13 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.start(pc.blue("Parameter checking..."))
+  spinner.start(pc.blue("Checking parameters..."))
   const options: Options = program.opts()
-  const { discordToken, discordServerId, saveArchive } = options
+  const { discordBotToken, discordServerId, saveArchive } = options
   let isFailed = false
   const errorMessages = []
 
-  if (discordToken === undefined) {
+  if (discordBotToken === undefined) {
     errorMessages.push("Discord Bot OAuth Token is required")
     isFailed = true
   }
@@ -62,106 +64,90 @@ interface Options {
 
   if (
     isFailed ||
-    discordToken === undefined ||
+    discordBotToken === undefined ||
     discordServerId === undefined ||
     saveArchive === undefined
   ) {
-    spinner.stop(pc.blue("Parameter checking... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
     console.error(pc.red(errorMessages.join("\n")))
     process.exit(0)
   }
-  spinner.stop(pc.blue("Parameter checking... " + pc.green("Success")))
+  spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
 
-  // Slackのチャンネル情報を取得して変換する
-  spinner.start(pc.blue("Converting slack channels file..."))
-  const slackChannelsFilePath = join(slackDirPath, "channels.json")
-  const newSlackChannelsFilePath = join(migrationDirPath, "slack/channels.json")
-  let slackChannels: SlackChannel[] = []
-  try {
-    slackChannels = await getSlackChannels(slackChannelsFilePath)
-    await mkdir(dirname(newSlackChannelsFilePath), {
-      recursive: true,
-    })
-    await writeFile(
-      newSlackChannelsFilePath,
-      JSON.stringify(slackChannels, null, 2)
-    )
-  } catch (error) {
-    spinner.stop(
-      pc.blue("Converting slack channels file... " + pc.red("Failed"))
-    )
-    console.error(error)
-    process.exit(0)
-  }
-  spinner.stop(
-    pc.blue("Converting slack channels file... " + pc.green("Success"))
-  )
-
-  // Slackのユーザー名を取得して変換する
-  spinner.start(pc.blue("Converting slack users file..."))
-  const slackUsersFilePath = join(slackDirPath, "users.json")
-  const newSlackUsersFilePath = join(migrationDirPath, "slack/user.json")
+  // ユーザー名を取得する
+  spinner.start(pc.blue("Getting user file..."))
+  const usersFilePath = join(migrationDirPath, "user.json")
   let users: User[] = []
   try {
-    users = await getUsers(slackUsersFilePath)
-    await mkdir(dirname(newSlackUsersFilePath), {
-      recursive: true,
-    })
-    await writeFile(newSlackUsersFilePath, JSON.stringify(users, null, 2))
+    await access(usersFilePath, constants.R_OK)
+    users = JSON.parse(await readFile(usersFilePath, "utf8")) as User[]
   } catch (error) {
-    spinner.stop(pc.blue("Converting slack users file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting user file... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Converting slack users file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting user file... " + pc.green("Success")))
 
-  // Slackのメッセージのjsonファイルを取得して変換する
-  spinner.start(pc.blue("Converting slack message files..."))
+  // Slackのチャンネル情報を取得して変換する
+  spinner.start(pc.blue("Converting channel file..."))
+  const slackChannelFilePath = join(slackDirPath, "channels.json")
+  const newChannelFilePath = join(migrationDirPath, "channel.json")
+  let channels: Channel[] = []
+  try {
+    channels = await getChannels(slackChannelFilePath)
+    await mkdir(dirname(newChannelFilePath), {
+      recursive: true,
+    })
+    await writeFile(newChannelFilePath, JSON.stringify(channels, null, 2))
+  } catch (error) {
+    spinner.stop(pc.blue("Converting channel file... " + pc.red("Failed")))
+    console.error(error)
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Converting channel file... " + pc.green("Success")))
+
+  // Slackのメッセージを取得して変換する
+  spinner.start(pc.blue("Converting message file..."))
   try {
     // TODO: Promise.allSettledなどで並列化する
-    for (const channel of slackChannels) {
-      const messageDir = await readdir(join(slackDirPath, channel.name))
+    for (const channel of channels) {
+      const messageDir = await readdir(
+        join(slackDirPath, channel.slack.channel_name)
+      )
       for (const messageFileName of messageDir) {
         const messageFilePath = join(
           slackDirPath,
-          channel.name,
+          channel.slack.channel_name,
           messageFileName
         )
         const newMessageFilePath = join(
           migrationDirPath,
-          "slack/message",
-          channel.name,
+          "message",
+          channel.slack.channel_name,
           messageFileName
         )
-        const slackMessages = await getSlackMessages(messageFilePath, users)
+        const messages = await getMessages(messageFilePath, users)
         await mkdir(dirname(newMessageFilePath), {
           recursive: true,
         })
-        await writeFile(
-          newMessageFilePath,
-          JSON.stringify(slackMessages, null, 2)
-        )
+        await writeFile(newMessageFilePath, JSON.stringify(messages, null, 2))
       }
     }
   } catch (error) {
-    spinner.stop(
-      pc.blue("Converting slack message files... " + pc.red("Failed"))
-    )
+    spinner.stop(pc.blue("Converting message file... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(
-    pc.blue("Converting slack message files... " + pc.green("Success"))
-  )
+  spinner.stop(pc.blue("Converting message file... " + pc.green("Success")))
 
   // Discordのチャンネルを作成
   // let discordChannels: DiscordChannel[] = []
   // try {
   //   spinner.start(pc.blue("Creating Discord Channels..."))
   //   discordChannels = await createDiscordChannels(
-  //     discordToken,
+  //     discordBotToken,
   //     discordServerId,
-  //     slackChannels,
+  //     channels,
   //     saveArchive
   //   )
   //   spinner.stop(pc.blue("Creating Discord Channels... " + pc.green("Success")))
@@ -174,8 +160,8 @@ interface Options {
   // console.log(discordChannels)
 
   // for (const channel of discordChannels) {
-  //   // await getSlackMessages(slackToken, channel.slackChannelId)
-  //   const messages = await getSlackMessages(slackToken, channel.slackChannelId)
+  //   // await getMessages(slackToken, channel.slackChannelId)
+  //   const messages = await getMessages(slackToken, channel.slackChannelId)
   //   console.log(JSON.stringify(messages, null, 2))
   // }
 
