@@ -19,6 +19,12 @@ export interface Channel {
   }
 }
 
+/**
+ * Get channel information
+ * チャンネル情報を取得する
+ * @param filePath
+ * @returns Channel[]
+ */
 export const getChannels = async (filePath: string) => {
   await access(filePath, constants.R_OK)
   const channelsFile = await readFile(filePath, "utf8")
@@ -38,6 +44,17 @@ export const getChannels = async (filePath: string) => {
   return channels
 }
 
+/**
+ * Create channel
+ * チャンネルを作成する
+ * @param discordBotToken
+ * @param discordServerId
+ * @param channels
+ * @param defaultCategory
+ * @param archiveCategory
+ * @param isMigrateArchive
+ * @returns Channel[]
+ */
 export const createChannels = async (
   discordBotToken: string,
   discordServerId: string,
@@ -76,6 +93,14 @@ export const createChannels = async (
   return newChannels
 }
 
+/**
+ * Delete channel
+ * チャンネルを削除する
+ * @param discordBotToken
+ * @param discordServerId
+ * @param channels
+ * @returns Channel[]
+ */
 export const deleteChannels = async (
   discordBotToken: string,
   discordServerId: string,

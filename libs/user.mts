@@ -16,6 +16,12 @@ export interface User {
   }
 }
 
+/**
+ * Get user infomation
+ * ユーザー情報を取得する
+ * @param filePath
+ * @returns User[]
+ */
 export const getUsers = async (filePath: string) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")

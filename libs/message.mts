@@ -11,6 +11,13 @@ export interface Message {
   timestamp: string
 }
 
+/**
+ * Get message infomation
+ * メッセージ情報を取得する
+ * @param filePath
+ * @param users
+ * @returns Message[]
+ */
 export const getMessages = async (filePath: string, users: User[]) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")

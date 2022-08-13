@@ -5,6 +5,14 @@ export interface Category {
   name: string
 }
 
+/**
+ * Create category
+ * カテゴリーを作成する
+ * @param discordBotToken
+ * @param discordServerId
+ * @param categories
+ * @returns Category[]
+ */
 export const createCategories = async (
   discordBotToken: string,
   discordServerId: string,
@@ -28,6 +36,14 @@ export const createCategories = async (
   return newCategories
 }
 
+/**
+ * Delete category
+ * カテゴリーを削除する
+ * @param discordBotToken
+ * @param discordServerId
+ * @param categories
+ * @returns Category[]
+ */
 export const deleteCategories = async (
   discordBotToken: string,
   discordServerId: string,
