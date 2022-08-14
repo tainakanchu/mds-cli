@@ -30,7 +30,7 @@ interface Options {
     .description("Delete channel")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
-      "Discord bot oauth token",
+      "DiscordBot oauth token",
       process.env.DISCORD_BOT_TOKEN
     )
     .requiredOption(
@@ -48,7 +48,7 @@ interface Options {
   const errorMessages = []
 
   if (discordBotToken === undefined) {
-    errorMessages.push("Discord Bot OAuth Token is required")
+    errorMessages.push("DiscordBot OAuth Token is required")
     isFailed = true
   }
   if (discordServerId === undefined) {

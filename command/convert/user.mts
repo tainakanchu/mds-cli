@@ -32,7 +32,7 @@ interface Options {
     .description("Convert user data")
     .requiredOption(
       "-st, --slack-bot-token [string]",
-      "Slack bot oauth token",
+      "SlackBot oauth token",
       process.env.SLACK_BOT_TOKEN
     )
     .parse(process.argv)
@@ -43,7 +43,7 @@ interface Options {
   const { slackBotToken } = options
   if (slackBotToken === undefined) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red("Slack Bot OAuth Token is required"))
+    console.error(pc.red("SlackBot OAuth Token is required"))
     process.exit(0)
   }
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
