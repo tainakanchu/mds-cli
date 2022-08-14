@@ -1,18 +1,19 @@
 import { access, readFile } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
-import { Member } from "@slack/web-api/dist/response/UsersListResponse"
+import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
+import type { Bot } from "./bot.mjs"
 
 export interface User {
   slack: {
-    user_id: string
-    user_name: string
+    id: string
+    name: string
     deleted: boolean
     is_bot: boolean
   }
   discord: {
-    user_id: string
-    user_name: string
+    id: string
+    name: string
   }
 }
 
@@ -21,28 +22,36 @@ export interface User {
  * @param filePath
  * @returns User[]
  */
-export const convertUsers = async (filePath: string) => {
+export const convertUsers = async (filePath: string, bots: Bot[]) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")
   const users = JSON.parse(usersFile)
-    // Botは除外する
-    .filter((member: Member) => !member.is_bot)
-    .map((member: Member) => {
-      const userName = member.profile?.display_name
-        ? member.profile.display_name
-        : ""
+    .map((user: SlackUser) => {
+      let id = user.id || ""
+
+      if (user.is_bot) {
+        const appId = user.profile?.api_app_id || ""
+        const botId = bots.find((bot) => bot.app_id === appId)?.id || ""
+        id = botId
+      }
+
+      const name = user.is_bot
+        ? user.real_name || ""
+        : user.profile?.display_name || ""
 
       return {
         slack: {
-          user_id: member.id,
-          user_name: userName,
-          deleted: member.deleted,
+          id: id,
+          name: name,
+          deleted: user.deleted || false,
+          is_bot: user.is_bot || false,
         },
         discord: {
-          user_id: "",
-          user_name: userName,
+          id: "",
+          name: name,
         },
-      }
-    }) as User[]
+      } as User
+    })
+    .sort((user: User) => !user.slack.is_bot || !user.slack.deleted)
   return users
 }

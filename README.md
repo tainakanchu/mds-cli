@@ -70,9 +70,10 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 1. [direnvのインストール](https://github.com/direnv/direnv)
 2. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
 3. [Discord Botの作成](#create-discord-bot)
-4. [Slackのデータのエクスポート](#export-slack-data)
-5. [環境変数の設定](#setting-environment-variables)
-6. [実行環境の設定](#setting-execution-environment)
+4. [Slack Botの作成](#create-slack-bot)
+5. [Slackのデータのエクスポート](#export-slack-data)
+6. [環境変数の設定](#setting-environment-variables)
+7. [実行環境の設定](#setting-execution-environment)
 
 <h3 id="create-discord-bot">Discord Botの作成</h3>
 
@@ -83,6 +84,10 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 5. Bot > Build A Botの項目からトークンを控えておく
 6. Discordのアプリで、DiscordのサーバーIDを表示させるために、Discordのアプリの設定 > 詳細設定で開発者モードを有効化にする
 7. Discordのアプリで、サーバーを右クリックで表示される「IDをコピー」の項目をクリックしてDiscordのサーバーIDを控えておく
+
+<h3 id="create-slack-bot">Slack Botの作成</h3>
+
+<!-- TODO: ここにSlack Botの作成の手順を書く -->
 
 <h3 id="export-slack-data">Slackのデータのエクスポート</h3>
 
@@ -102,6 +107,7 @@ cp .envrc.sample .envrc
 ```zsh
 export NODE_OPTIONS=--openssl-legacy-provider
 export IS_MIGRATE_ARCHIVE="true" # ← アーカイブされたチャンネルを移行しない場合はfalseを設定
+export SLACK_BOT_TOKEN="" # ← Slack Botのトークンを設定
 export DISCORD_BOT_TOKEN="" # ← Discord Botのトークンを設定
 export DISCORD_SERVER_ID=""　# ← DiscordのサーバーIDを設定
 ```
@@ -132,40 +138,17 @@ npm install
 
 ## 使用方法
 
-最初に下記のコマンドを順次実行し、Slackのユーザーのデータファイルを、Discordに移行できるデータファイルに変換する  
+最初に下記のコマンドを順次実行する
 
 ```zsh
 # 作業ディレクトリ初期化などの初期化処理をする
 npm run init
 
-# Slackのユーザーのデータファイルを、Discordに移行できるデータファイルに変換する
-npm run convert:user
-```
-
-次にメッセージ内のメンションなどに含まれるユーザ名の変更、移行したPrivateチャンネルへのユーザーの自動joinをしたい場合は、  
-任意で移行するユーザーのデータファイル`.migtation/user.json`に対象の各ユーザーのユーザー名、ユーザーIDを設定する  
-
-```json
-{
-  "slack": {
-    "user_id": "U00XXXXXXXX",
-    "user_name": "Slackのユーザー名",
-    "deleted": false,
-    "is_bot": false
-  },
-  "discord": {
-    "user_id": "", // ← DiscordのユーザーIDを設定
-    "user_name": "" // ← Discordのユーザー名を設定
-  }
-}
-```
-
-最後に下記のコマンドを順次実行し、Slackの残りの各データファイルをDiscordに移行できるデータファイルに変換後、  
-Discordにデプロイする  
-
-```zsh
 # Slackのチャンネルのデータファイルを、Discordに移行できるデータファイルに変換する
 npm run convert:channel
+
+# Slackのユーザーのデータファイルを、Discordに移行できるデータファイルに変換する
+npm run convert:user
 
 # Slackのメッセージのデータファイルを、Discordに移行できるデータファイルに変換する
 npm run convert:message
@@ -180,6 +163,9 @@ npm run deploy:message
 Discordへメッセージのデータの移行に失敗した場合は、下記のコマンドを実行することでリセットできる  
 
 ```zsh
+# 作成したメッセージを削除する
+npm run delete:message
+
 # 作成したチャンネルを削除する
 npm run delete:channel
 ```

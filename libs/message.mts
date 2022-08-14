@@ -21,46 +21,51 @@ export interface Message {
 export const convertMessages = async (filePath: string, users: User[]) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")
-  const messages: SlackMessage[] = JSON.parse(messageFile).map(
-    (message: SlackMessage) => {
-      // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
-      let text = "------------------------------------------------\n"
+  const slackMessages = JSON.parse(messageFile) as SlackMessage[]
+  const messages: Message[] = []
+  for (const message of slackMessages) {
+    // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
+    let text = "------------------------------------------------\n"
 
-      // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
-      const user = users.find((user) => user.slack.user_id === message.user)
-      const userName = message.user && user ? user.discord.user_name : ""
-      const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
-      const timestamp = message.ts
-        ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
-        : ""
-      text += `${icon}  **${userName}**  ${timestamp}\n`
+    // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
+    const user = users.find(
+      (user) =>
+        user.slack.id === message.user || user.slack.id === message.bot_id
+    )
 
-      // TODO: ここに添付ファイルのダウンロード処理を書く
+    const name = user ? user.discord.name : "NoName"
+    const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
+    const timestamp = message.ts
+      ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
+      : ""
+    text += `${icon}  **${name}**  ${timestamp}\n`
 
-      // TODO: ここにサブタイプに応じて必要なら処理を書く
-      // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
+    // TODO: ここに添付ファイルのダウンロード処理を書く
 
-      // テキストにメッセージ内容を追加
-      text += message.text
+    // TODO: ここにサブタイプに応じて必要なら処理を書く
+    // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
 
-      // テキスト内のメンションをユーザー名もしくはBot名に置換
-      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
-        for (const user of users) {
-          // Discordで送信時にメンションされないように加工
-          text = text.replaceAll(
-            new RegExp(`<@${user.slack.user_id}>`, "g"),
-            `@${user.discord.user_name}`
-          )
-        }
+    // テキストにメッセージ内容を追加
+    text += message.text
+
+    // テキスト内のメンションをユーザー名もしくはBot名に置換
+    if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
+      for (const user of users) {
+        // Discordで送信時にメンションされないように加工
+        text = text.replaceAll(
+          new RegExp(`<@${user.slack.id}>`, "g"),
+          `@${user.discord.name}`
+        )
       }
-
-      return {
-        message_id: "",
-        text: text,
-        timestamp: "",
-      } as Message
     }
-  )
+
+    messages.push({
+      message_id: "",
+      text: text,
+      timestamp: "",
+    })
+  }
+
   return messages
 }
 

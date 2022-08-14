@@ -13,6 +13,10 @@ import type { User } from "../../libs/user.mjs"
 const __dirname = new URL(import.meta.url).pathname
 const migrationDirPath = resolve(__dirname, "../../../.migration/")
 const slackDirPath = resolve(__dirname, "../../../.slack/")
+const slackMessageDirPath = slackDirPath
+const discordMessageDirPath = join(migrationDirPath, "message")
+const slackChannelFilePath = join(slackDirPath, "channels.json")
+const discordChannelFilePath = join(migrationDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -37,16 +41,20 @@ const spinner = new Spinner()
 
   // Slackのチャンネル情報を変換する
   spinner.start(pc.blue("Converting channel data..."))
-  const slackChannelFilePath = join(slackDirPath, "channels.json")
-  const newChannelFilePath = join(migrationDirPath, "channel.json")
-  const messageDirPath = join(migrationDirPath, "message")
   let newChannels: Channel[] = []
   try {
-    newChannels = await convertChannels(slackChannelFilePath, messageDirPath)
-    await mkdir(dirname(newChannelFilePath), {
+    newChannels = await convertChannels(
+      slackChannelFilePath,
+      slackMessageDirPath,
+      discordMessageDirPath
+    )
+    await mkdir(dirname(discordChannelFilePath), {
       recursive: true,
     })
-    await writeFile(newChannelFilePath, JSON.stringify(newChannels, null, 2))
+    await writeFile(
+      discordChannelFilePath,
+      JSON.stringify(newChannels, null, 2)
+    )
   } catch (error) {
     spinner.stop(pc.blue("Converting channel data... " + pc.red("Failed")))
     console.error(error)
