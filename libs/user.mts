@@ -24,25 +24,25 @@ export interface User {
 export const convertUsers = async (filePath: string) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")
-  const users = JSON.parse(usersFile).map((member: Member) => {
-    const userName = member.is_bot
-      ? member.name
-      : member.profile?.display_name
-      ? member.profile.display_name
-      : ""
+  const users = JSON.parse(usersFile)
+    // Botは除外する
+    .filter((member: Member) => !member.is_bot)
+    .map((member: Member) => {
+      const userName = member.profile?.display_name
+        ? member.profile.display_name
+        : ""
 
-    return {
-      slack: {
-        user_id: member.id,
-        user_name: userName,
-        deleted: member.deleted,
-        is_bot: member.is_bot,
-      },
-      discord: {
-        user_id: "",
-        user_name: userName,
-      },
-    }
-  }) as User[]
+      return {
+        slack: {
+          user_id: member.id,
+          user_name: userName,
+          deleted: member.deleted,
+        },
+        discord: {
+          user_id: "",
+          user_name: userName,
+        },
+      }
+    }) as User[]
   return users
 }

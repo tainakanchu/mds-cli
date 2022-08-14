@@ -68,20 +68,20 @@ interface Options {
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
 
   // チャンネル情報を取得する
-  spinner.start(pc.blue("Getting channel file..."))
+  spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
     await access(channelFilePath, constants.R_OK)
     channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting channel file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
 
   // カテゴリー情報を取得する
-  spinner.start(pc.blue("Getting category file..."))
+  spinner.start(pc.blue("Getting category data..."))
   let categories: Category[] = []
   try {
     await access(categoryFilePath, constants.R_OK)
@@ -89,11 +89,11 @@ interface Options {
       await readFile(categoryFilePath, "utf8")
     ) as Category[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting category file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting category data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting category file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting category data... " + pc.green("Success")))
 
   // Discordのチャンネルを削除する
   spinner.start(pc.blue("Deleting channel..."))
@@ -112,18 +112,18 @@ interface Options {
   spinner.stop(pc.blue("Deleting channel... " + pc.green("Success")))
 
   // チャンネル情報を更新する
-  spinner.start(pc.blue("Updating channel file..."))
+  spinner.start(pc.blue("Updating channel data..."))
   try {
     await mkdir(dirname(channelFilePath), {
       recursive: true,
     })
     await writeFile(channelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
-    spinner.stop(pc.blue("Updating channel file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Updating channel data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Updating channel file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Updating channel data... " + pc.green("Success")))
 
   // Discordのカテゴリーを削除する
   spinner.start(pc.blue("Deleting category..."))
@@ -142,18 +142,18 @@ interface Options {
   spinner.stop(pc.blue("Deleting category... " + pc.green("Success")))
 
   // カテゴリー情報のファイルを更新する
-  spinner.start(pc.blue("Updating category file..."))
+  spinner.start(pc.blue("Updating category data..."))
   try {
     await mkdir(dirname(categoryFilePath), {
       recursive: true,
     })
     await writeFile(categoryFilePath, JSON.stringify(newCategories, null, 2))
   } catch (error) {
-    spinner.stop(pc.blue("Updating category file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Updating category data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Updating category file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Updating category data... " + pc.green("Success")))
 
   process.exit(0)
 })()

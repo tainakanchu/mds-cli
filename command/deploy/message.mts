@@ -90,17 +90,17 @@ interface Options {
   spinner.stop(pc.blue("Authenticating discord... " + pc.green("Success")))
 
   // チャンネル情報を取得する
-  spinner.start(pc.blue("Getting channel file..."))
+  spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
     await access(channelFilePath, constants.R_OK)
     channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting channel file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting channel file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
 
   // メッセージを作成する
   spinner.start(pc.blue("Creating message..."))

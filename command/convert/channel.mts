@@ -22,21 +22,21 @@ const spinner = new Spinner()
   program.description("Convert channel file").parse(process.argv)
 
   // ユーザー名を取得する
-  spinner.start(pc.blue("Getting user file..."))
+  spinner.start(pc.blue("Getting user data..."))
   const userFilePath = join(migrationDirPath, "user.json")
   let users: User[] = []
   try {
     await access(userFilePath, constants.R_OK)
     users = JSON.parse(await readFile(userFilePath, "utf8")) as User[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting user file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting user data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting user file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting user data... " + pc.green("Success")))
 
   // Slackのチャンネル情報を変換する
-  spinner.start(pc.blue("Converting channel file..."))
+  spinner.start(pc.blue("Converting channel data..."))
   const slackChannelFilePath = join(slackDirPath, "channels.json")
   const newChannelFilePath = join(migrationDirPath, "channel.json")
   const messageDirPath = join(migrationDirPath, "message")
@@ -48,11 +48,11 @@ const spinner = new Spinner()
     })
     await writeFile(newChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
-    spinner.stop(pc.blue("Converting channel file... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Converting channel data... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Converting channel file... " + pc.green("Success")))
+  spinner.stop(pc.blue("Converting channel data... " + pc.green("Success")))
 
   process.exit(0)
 })()
