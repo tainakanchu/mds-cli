@@ -11,8 +11,8 @@ import { convertMessages } from "../../libs/message.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const slackDirPath = resolve(__dirname, "../../../.slack/")
 const migrationDirPath = resolve(__dirname, "../../../.migration/")
+const slackDirPath = resolve(__dirname, "../../../.slack/")
 const channelFilePath = join(migrationDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })

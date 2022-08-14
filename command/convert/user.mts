@@ -7,8 +7,10 @@ import { Spinner } from "../../libs/util/spinner.mjs"
 import { convertUsers } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const slackDirPath = resolve(__dirname, "../../../.slack/")
 const migrationDirPath = resolve(__dirname, "../../../.migration/")
+const slackDirPath = resolve(__dirname, "../../../.slack/")
+const slackUserFilePath = join(slackDirPath, "users.json")
+const newUserFilePath = join(migrationDirPath, "user.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -19,8 +21,6 @@ const spinner = new Spinner()
 
   // Slackのユーザーのデータを変換する
   spinner.start(pc.blue("Converting user data..."))
-  const slackUserFilePath = join(slackDirPath, "users.json")
-  const newUserFilePath = join(migrationDirPath, "user.json")
   try {
     const users = await convertUsers(slackUserFilePath)
     await mkdir(dirname(newUserFilePath), {
