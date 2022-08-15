@@ -1,7 +1,7 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import pc from "picocolors"
-import { readFile, access, mkdir, writeFile } from "node:fs/promises"
+import { readFile, access } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
 import { resolve, join } from "node:path"
@@ -13,8 +13,8 @@ import { createMessages } from "../../libs/message.mjs"
 import type { Message } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../../.migration/")
-const channelFilePath = join(migrationDirPath, "channel.json")
+const distDirPath = resolve(__dirname, "../../../.dist/")
+const distChannelFilePath = join(distDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -93,8 +93,10 @@ interface Options {
   spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
-    await access(channelFilePath, constants.R_OK)
-    channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
+    await access(distChannelFilePath, constants.R_OK)
+    channels = JSON.parse(
+      await readFile(distChannelFilePath, "utf8")
+    ) as Channel[]
   } catch (error) {
     spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)

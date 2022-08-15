@@ -13,11 +13,11 @@ import type { Bot } from "../../libs/bot.mjs"
 import { WebClient } from "@slack/web-api"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../../.migration/")
-const slackDirPath = resolve(__dirname, "../../../.slack/")
-const channelFilePath = join(migrationDirPath, "channel.json")
-const slackUserFilePath = join(slackDirPath, "users.json")
-const newUserFilePath = join(migrationDirPath, "user.json")
+const srcDirPath = resolve(__dirname, "../../../.src/")
+const srcUserFilePath = join(srcDirPath, "users.json")
+const distDirPath = resolve(__dirname, "../../../.dist/")
+const distChannelFilePath = join(distDirPath, "channel.json")
+const distUserFilePath = join(distDirPath, "user.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -48,12 +48,14 @@ interface Options {
   }
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
 
-  // Slackのチャンネルのデータを取得する
+  // チャンネルのデータを取得する
   spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
-    await access(channelFilePath, constants.R_OK)
-    channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
+    await access(distChannelFilePath, constants.R_OK)
+    channels = JSON.parse(
+      await readFile(distChannelFilePath, "utf8")
+    ) as Channel[]
   } catch (error) {
     spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)
@@ -61,8 +63,8 @@ interface Options {
   }
   spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
 
-  // メッセージ内のBot Idを取得する
-  spinner.start(pc.blue("Getting bot id in message..."))
+  // メッセージ内のBotIdを取得する
+  spinner.start(pc.blue("Getting BotId in message..."))
   let botIds: string[] = []
   try {
     for (const channel of channels) {
@@ -72,13 +74,13 @@ interface Options {
     }
     botIds = [...new Set(botIds)]
   } catch (error) {
-    spinner.stop(pc.blue("Getting bot id in message... " + pc.red("Failed")))
+    spinner.stop(pc.blue("Getting BotId in message... " + pc.red("Failed")))
     console.error(error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting bot id in message... " + pc.green("Success")))
+  spinner.stop(pc.blue("Getting BotId in message... " + pc.green("Success")))
 
-  // SlackのBotのデータを取得して変換する
+  // Botのデータを取得して変換する
   spinner.start(pc.blue("Converting bot data..."))
   const client = new WebClient(slackBotToken)
   let bots: Bot[] = []
@@ -91,14 +93,14 @@ interface Options {
   }
   spinner.stop(pc.blue("Converting bot data... " + pc.green("Success")))
 
-  // Slackのユーザーのデータを変換する
+  // ユーザーのデータを取得して変換する
   spinner.start(pc.blue("Converting user data..."))
   try {
-    const users = await convertUsers(slackUserFilePath, bots)
-    await mkdir(dirname(newUserFilePath), {
+    const users = await convertUsers(srcUserFilePath, bots)
+    await mkdir(dirname(distUserFilePath), {
       recursive: true,
     })
-    await writeFile(newUserFilePath, JSON.stringify(users, null, 2))
+    await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
   } catch (error) {
     spinner.stop(pc.blue("Converting user data... " + pc.red("Failed")))
     console.error(error)

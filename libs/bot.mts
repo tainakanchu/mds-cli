@@ -9,17 +9,18 @@ export interface Bot {
 }
 
 /**
- * Get bot id in message
- * @param slackMessageFilePath
+ * Get BotId in message
+ * @param srcMessageFilePath
  * @returns string[]
  */
-export const getMessageBotIds = async (slackMessageFilePath: string) => {
-  const slackMessageFile = await readFile(slackMessageFilePath, "utf8")
-  const slackMessage: SlackMessage[] = JSON.parse(slackMessageFile)
-  const botIds = slackMessage
+export const getMessageBotIds = async (srcMessageFilePath: string) => {
+  const srcMessageFile = await readFile(srcMessageFilePath, "utf8")
+  const srcMessage: SlackMessage[] = JSON.parse(srcMessageFile)
+  const botIds = srcMessage
     .filter((message) => message.bot_id)
     .map((message) => message.bot_id as string)
 
+  // 重複は排除する
   return [...new Set(botIds)]
 }
 

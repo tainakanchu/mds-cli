@@ -8,12 +8,12 @@ import { convertChannels } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../../.migration/")
-const slackDirPath = resolve(__dirname, "../../../.slack/")
-const slackMessageDirPath = slackDirPath
-const discordMessageDirPath = join(migrationDirPath, "message")
-const slackChannelFilePath = join(slackDirPath, "channels.json")
-const discordChannelFilePath = join(migrationDirPath, "channel.json")
+const srcDirPath = resolve(__dirname, "../../../.src/")
+const srcChannelFilePath = join(srcDirPath, "channels.json")
+const srcMessageDirPath = srcDirPath
+const distDirPath = resolve(__dirname, "../../../.dist/")
+const distChannelFilePath = join(distDirPath, "channel.json")
+const distMessageDirPath = join(distDirPath, "message")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -27,17 +27,14 @@ const spinner = new Spinner()
   let newChannels: Channel[] = []
   try {
     newChannels = await convertChannels(
-      slackChannelFilePath,
-      slackMessageDirPath,
-      discordMessageDirPath
+      srcChannelFilePath,
+      srcMessageDirPath,
+      distMessageDirPath
     )
-    await mkdir(dirname(discordChannelFilePath), {
+    await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
-    await writeFile(
-      discordChannelFilePath,
-      JSON.stringify(newChannels, null, 2)
-    )
+    await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
     spinner.stop(pc.blue("Converting channel data... " + pc.red("Failed")))
     console.error(error)

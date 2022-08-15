@@ -26,14 +26,14 @@ export interface Channel {
 /**
  *  * Convert channel information
  * @param channelFilePath
- * @param slackMessageDirPath
- * @param discordMessageDirPath
+ * @param srcMessageDirPath
+ * @param distMessageDirPath
  * @returns Channel[]
  */
 export const convertChannels = async (
   channelFilePath: string,
-  slackMessageDirPath: string,
-  discordMessageDirPath: string
+  srcMessageDirPath: string,
+  distMessageDirPath: string
 ) => {
   await access(channelFilePath, constants.R_OK)
   const slackChannels = JSON.parse(
@@ -44,14 +44,13 @@ export const convertChannels = async (
   for (const channel of slackChannels) {
     if (channel.name) {
       // Slackのメッセージファイルのパスを取得する
-      const slackMessageFilePaths = await getMessageFilePaths(
-        join(slackMessageDirPath, channel.name)
+      const srcMessageFilePaths = await getMessageFilePaths(
+        join(srcMessageDirPath, channel.name)
       )
 
       // Discordのメッセージファイルのパスを算出する
-      const discordMessageFilePaths = slackMessageFilePaths.map(
-        (messageFilePath) =>
-          messageFilePath.replace(slackMessageDirPath, discordMessageDirPath)
+      const distMessageFilePaths = srcMessageFilePaths.map((messageFilePath) =>
+        messageFilePath.replace(srcMessageDirPath, distMessageDirPath)
       )
 
       newChannels.push({
@@ -60,13 +59,13 @@ export const convertChannels = async (
           channel_name: channel.name || "",
           is_archived: channel.is_archived || false,
           purpose: channel.purpose?.value ? channel.purpose.value : "",
-          message_file_paths: slackMessageFilePaths,
+          message_file_paths: srcMessageFilePaths,
         },
         discord: {
           channel_id: "",
           channel_name: channel.name || "",
           topic: channel.purpose?.value ? channel.purpose.value : "",
-          message_file_paths: discordMessageFilePaths,
+          message_file_paths: distMessageFilePaths,
         },
       })
     }

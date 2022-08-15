@@ -21,9 +21,9 @@ export interface Message {
 export const convertMessages = async (filePath: string, users: User[]) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")
-  const slackMessages = JSON.parse(messageFile) as SlackMessage[]
+  const srcMessages = JSON.parse(messageFile) as SlackMessage[]
   const messages: Message[] = []
-  for (const message of slackMessages) {
+  for (const message of srcMessages) {
     // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
     let text = "------------------------------------------------\n"
 

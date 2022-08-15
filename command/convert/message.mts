@@ -4,16 +4,16 @@ import pc from "picocolors"
 import { writeFile, mkdir, readFile, access } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
-import { basename, dirname, resolve, join } from "node:path"
+import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 import { convertMessages } from "../../libs/message.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../../.migration/")
-const channelFilePath = join(migrationDirPath, "channel.json")
-const userFilePath = join(migrationDirPath, "user.json")
+const distDirPath = resolve(__dirname, "../../../.dist/")
+const distChannelFilePath = join(distDirPath, "channel.json")
+const distUserFilePath = join(distDirPath, "user.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -26,8 +26,10 @@ const spinner = new Spinner()
   spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
-    await access(channelFilePath, constants.R_OK)
-    channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
+    await access(distChannelFilePath, constants.R_OK)
+    channels = JSON.parse(
+      await readFile(distChannelFilePath, "utf8")
+    ) as Channel[]
   } catch (error) {
     spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)
@@ -39,8 +41,8 @@ const spinner = new Spinner()
   spinner.start(pc.blue("Getting user data..."))
   let users: User[] = []
   try {
-    await access(userFilePath, constants.R_OK)
-    users = JSON.parse(await readFile(userFilePath, "utf8")) as User[]
+    await access(distUserFilePath, constants.R_OK)
+    users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
   } catch (error) {
     spinner.stop(pc.blue("Getting user data... " + pc.red("Failed")))
     console.error(error)

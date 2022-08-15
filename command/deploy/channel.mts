@@ -12,9 +12,9 @@ import { createCategories } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../../.migration/")
-const categoryFilePath = join(migrationDirPath, "category.json")
-const channelFilePath = join(migrationDirPath, "channel.json")
+const distDirPath = resolve(__dirname, "../../../.dist/")
+const distCategoryFilePath = join(distDirPath, "category.json")
+const distChannelFilePath = join(distDirPath, "channel.json")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -78,8 +78,10 @@ interface Options {
   spinner.start(pc.blue("Getting channel data..."))
   let channels: Channel[] = []
   try {
-    await access(channelFilePath, constants.R_OK)
-    channels = JSON.parse(await readFile(channelFilePath, "utf8")) as Channel[]
+    await access(distChannelFilePath, constants.R_OK)
+    channels = JSON.parse(
+      await readFile(distChannelFilePath, "utf8")
+    ) as Channel[]
   } catch (error) {
     spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
     console.error(error)
@@ -116,10 +118,13 @@ interface Options {
   // カテゴリー情報のファイルを作成する
   spinner.start(pc.blue("Creating category data..."))
   try {
-    await mkdir(dirname(categoryFilePath), {
+    await mkdir(dirname(distCategoryFilePath), {
       recursive: true,
     })
-    await writeFile(categoryFilePath, JSON.stringify(newCategories, null, 2))
+    await writeFile(
+      distCategoryFilePath,
+      JSON.stringify(newCategories, null, 2)
+    )
   } catch (error) {
     spinner.stop(pc.blue("Creating category data... " + pc.red("Failed")))
     console.error(error)
@@ -149,10 +154,10 @@ interface Options {
   // チャンネル情報を更新する
   spinner.start(pc.blue("Updating channel data..."))
   try {
-    await mkdir(dirname(channelFilePath), {
+    await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
-    await writeFile(channelFilePath, JSON.stringify(newChannels, null, 2))
+    await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
     spinner.stop(pc.blue("Updating channel data... " + pc.red("Failed")))
     console.error(error)

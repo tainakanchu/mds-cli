@@ -6,7 +6,7 @@ import { resolve } from "node:path"
 import { Spinner } from "../libs/util/spinner.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
-const migrationDirPath = resolve(__dirname, "../../.migration/")
+const distDirPath = resolve(__dirname, "../../.dist/")
 
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
@@ -14,14 +14,14 @@ const spinner = new Spinner()
 ;(async () => {
   const program = new Command()
   program
-    .description("Initial process for migrating from slack to discord")
+    .description("Init process for migrating from slack to discord")
     .parse(process.argv)
 
   // 作業ディレクトリ初期化
   spinner.start(pc.blue("Initializing working directory..."))
   try {
-    await rm(migrationDirPath, { recursive: true, force: true })
-    await mkdir(migrationDirPath, {
+    await rm(distDirPath, { recursive: true, force: true })
+    await mkdir(distDirPath, {
       recursive: true,
     })
   } catch (error) {
