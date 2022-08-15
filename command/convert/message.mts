@@ -18,9 +18,31 @@ const distUserFilePath = join(distDirPath, "user.json")
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
 
+interface Options {
+  showCutLine?: boolean
+}
+
 ;(async () => {
   const program = new Command()
-  program.description("Convert message data command").parse(process.argv)
+  program
+    .description("Convert message data command")
+    .requiredOption(
+      "-sc, --show-cut-line [boolean]",
+      "Whether to show cut line between message",
+      process.env.SHOW_CUT_LINE === "true" ? true : false
+    )
+    .parse(process.argv)
+
+  // パラメーターの取得
+  spinner.start(pc.blue("Checking parameters..."))
+  const options: Options = program.opts()
+  const { showCutLine } = options
+  if (showCutLine === undefined) {
+    spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
+    console.error(pc.red("Required parameters are not found"))
+    process.exit(0)
+  }
+  spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
 
   // Slackのチャンネルのデータを取得する
   spinner.start(pc.blue("Getting channel data..."))
@@ -63,7 +85,8 @@ const spinner = new Spinner()
                   channel.discord.message_file_paths[index]
                 const messages = await convertMessages(
                   slackMessageFilePath,
-                  users
+                  users,
+                  showCutLine
                 )
                 await mkdir(dirname(discordChannelFilePath), {
                   recursive: true,

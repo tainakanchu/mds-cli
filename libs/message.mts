@@ -16,16 +16,24 @@ export interface Message {
  * Convert message
  * @param filePath
  * @param users
+ * @param showCutLine
  * @returns Message[]
  */
-export const convertMessages = async (filePath: string, users: User[]) => {
+export const convertMessages = async (
+  filePath: string,
+  users: User[],
+  showCutLine: boolean
+) => {
   await access(filePath, constants.R_OK)
   const messageFile = await readFile(filePath, "utf8")
   const srcMessages = JSON.parse(messageFile) as SlackMessage[]
   const messages: Message[] = []
   for (const message of srcMessages) {
+    let text = ""
+
     // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
-    let text = "------------------------------------------------\n"
+    if (showCutLine)
+      text += "------------------------------------------------\n"
 
     // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
     const user = users.find(

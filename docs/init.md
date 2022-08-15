@@ -28,7 +28,7 @@
 <h2 id="export-slack-data">Slackのデータのエクスポート</h2>
 
 1. [Slackのデータのエクスポートのページ](https://slack.com/services/export)で、「[ワークスペースのデータをエクスポートする](https://slack.com/intl/ja-jp/help/articles/201658943-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%88%E3%81%99%E3%82%8B)」などの記事を参考に、**ワークスペースのオーナー権限**でSlackのデータをエクスポートし、zipファイルをダウンロードする
-2. zipファイルを解凍し、解凍したフォルダを「.slack」にリネームしてこのリポジトリのトップに配置する
+2. zipファイルを解凍し、解凍したフォルダを「.src」にリネームしてこのリポジトリのトップに配置する
 
 <h2 id="setting-environment-variables">環境変数の設定</h2>
 
@@ -38,7 +38,7 @@
 cp .envrc.sample .envrc
 ```
 
-.envrcの環境変数に、トークンやサーバーIDなどの情報を設定する  
+`.envrc`ファイルの環境変数の値に、SlackBotのトークン、DiscordBotのトークン、DiscordのサーバーIDなどの情報を設定する  
 
 ```zsh
 export SLACK_BOT_TOKEN="" # SlackBotのトークン
@@ -46,6 +46,7 @@ export DISCORD_BOT_TOKEN="" # DiscordBotのトークン
 export DISCORD_SERVER_ID="" # DiscordのサーバーID
 export NODE_OPTIONS=--openssl-legacy-provider # ライブラリのOpenSSL互換エラー防止用のオプション
 export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
+export SHOW_CUT_LINE="true" # メッセージの間に切り取り線を表示するかどうか
 ```
 
 下記のコマンドで、変更した環境変数の値を反映する  
