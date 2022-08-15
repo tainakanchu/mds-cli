@@ -16,7 +16,8 @@
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
     "destroy": "run-p \"deploy:*\"",
     "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
-    "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts"
+    "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
+    "start": "run-s build deploy"
   },
   "volta": {
     "node": "18.7.0",
