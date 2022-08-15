@@ -5,9 +5,9 @@ import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createChannels } from "../../libs/channel.mjs"
+import { createChannel } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { createCategories } from "../../libs/category.mjs"
+import { createCategory } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -46,7 +46,7 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.loading("Check parameters")
+  spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId, migrateArchive } = options
   if (
@@ -54,7 +54,7 @@ interface Options {
     discordServerId === undefined ||
     migrateArchive === undefined
   ) {
-    spinner.failed(null, "Required parameters are not found")
+    spinner.failed(null, "Required parameter are not found")
     process.exit(0)
   }
   spinner.success()
@@ -75,20 +75,16 @@ interface Options {
 
   // Discordのチャンネルのカテゴリーを作成する
   spinner.loading("Create category")
-  let newCategories: Category[] = []
+  let categories: Category[] = []
   let defaultCategory: Category | undefined = undefined
   let archiveCategory: Category | undefined = undefined
   try {
-    newCategories = await createCategories(discordBotToken, discordServerId, [
+    categories = await createCategory(discordBotToken, discordServerId, [
       { id: "", name: "CHANNEL" },
       { id: "", name: "ARCHIVE" },
     ])
-    defaultCategory = newCategories.find(
-      (category) => category.name === "CHANNEL"
-    )
-    archiveCategory = newCategories.find(
-      (category) => category.name === "ARCHIVE"
-    )
+    defaultCategory = categories.find((category) => category.name === "CHANNEL")
+    archiveCategory = categories.find((category) => category.name === "ARCHIVE")
     if (!defaultCategory || !archiveCategory) {
       throw new Error("Category is not found")
     }
@@ -104,10 +100,7 @@ interface Options {
     await mkdir(dirname(distCategoryFilePath), {
       recursive: true,
     })
-    await writeFile(
-      distCategoryFilePath,
-      JSON.stringify(newCategories, null, 2)
-    )
+    await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
@@ -116,9 +109,8 @@ interface Options {
 
   // Discordのチャンネルを作成する
   spinner.loading("Create channel")
-  let newChannels: Channel[] = []
   try {
-    newChannels = await createChannels(
+    channels = await createChannel(
       discordBotToken,
       discordServerId,
       channels,
@@ -138,7 +130,7 @@ interface Options {
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
-    await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
+    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

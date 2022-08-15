@@ -5,9 +5,9 @@ import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { deleteChannels } from "../../libs/channel.mjs"
+import { deleteChannel } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { deleteCategories } from "../../libs/category.mjs"
+import { deleteCategory } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -40,11 +40,11 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.loading("Check parameters")
+  spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.failed(null, "Required parameters are not found")
+    spinner.failed(null, "Required parameter are not found")
     process.exit(0)
   }
   spinner.success()
@@ -79,13 +79,8 @@ interface Options {
 
   // Discordのチャンネルを削除する
   spinner.loading("Delete channel")
-  let newChannels: Channel[] = []
   try {
-    newChannels = await deleteChannels(
-      discordBotToken,
-      discordServerId,
-      channels
-    )
+    channels = await deleteChannel(discordBotToken, discordServerId, channels)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
@@ -98,7 +93,7 @@ interface Options {
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
-    await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
+    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
@@ -107,9 +102,8 @@ interface Options {
 
   // Discordのカテゴリーを削除する
   spinner.loading("Delete category")
-  let newCategories: Category[] = []
   try {
-    newCategories = await deleteCategories(
+    categories = await deleteCategory(
       discordBotToken,
       discordServerId,
       categories
@@ -126,10 +120,7 @@ interface Options {
     await mkdir(dirname(distCategoryFilePath), {
       recursive: true,
     })
-    await writeFile(
-      distCategoryFilePath,
-      JSON.stringify(newCategories, null, 2)
-    )
+    await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

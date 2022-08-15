@@ -5,9 +5,9 @@ import { writeFile, mkdir, access, readFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { convertUsers } from "../../libs/user.mjs"
+import { buildUsers } from "../../libs/user.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { getMessageBotIds, convertBots } from "../../libs/bot.mjs"
+import { getMessageBotId, getBot } from "../../libs/bot.mjs"
 import type { Bot } from "../../libs/bot.mjs"
 import { WebClient } from "@slack/web-api"
 
@@ -28,7 +28,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Convert user data command")
+    .description("Build user data command")
     .requiredOption(
       "-st, --slack-bot-token [string]",
       "SlackBot OAuth Token",
@@ -37,11 +37,11 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.loading("Check parameters")
+  spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { slackBotToken } = options
   if (slackBotToken === undefined) {
-    spinner.failed(null, "Required parameters are not found")
+    spinner.failed(null, "Required parameter are not found")
     process.exit(0)
   }
   spinner.success()
@@ -66,7 +66,7 @@ interface Options {
   try {
     for (const channel of channels) {
       for (const messageFilePath of channel.slack.message_file_paths) {
-        botIds = [...botIds, ...(await getMessageBotIds(messageFilePath))]
+        botIds = [...botIds, ...(await getMessageBotId(messageFilePath))]
       }
     }
     botIds = [...new Set(botIds)]
@@ -76,22 +76,22 @@ interface Options {
   }
   spinner.success
 
-  // Botのデータを取得して変換する
-  spinner.loading("Convert bot data")
+  // Botのデータを取得する
+  spinner.loading("Get bot data")
   const client = new WebClient(slackBotToken)
   let bots: Bot[] = []
   try {
-    bots = await convertBots(client, botIds)
+    bots = await getBot(client, botIds)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success
 
-  // ユーザーのデータを取得して変換する
-  spinner.loading("Convert user data")
+  // ユーザーのデータを作成する
+  spinner.loading("Build user data")
   try {
-    const users = await convertUsers(srcUserFilePath, bots)
+    const users = await buildUsers(srcUserFilePath, bots)
     await mkdir(dirname(distUserFilePath), {
       recursive: true,
     })

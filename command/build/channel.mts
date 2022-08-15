@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import { writeFile, mkdir } from "node:fs/promises"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { convertChannels } from "../../libs/channel.mjs"
+import { buildChannel } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -19,13 +19,13 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program.description("Convert channel data command").parse(process.argv)
+  program.description("Build channel data command").parse(process.argv)
 
-  // Slackのチャンネル情報を変換する
-  spinner.loading("Convert channel data")
-  let newChannels: Channel[] = []
+  // チャンネル情報を作成する
+  spinner.loading("Build channel data")
+  let channels: Channel[] = []
   try {
-    newChannels = await convertChannels(
+    channels = await buildChannel(
       srcChannelFilePath,
       srcMessageDirPath,
       distMessageDirPath
@@ -33,7 +33,7 @@ const spinner = new Spinner()
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
-    await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
+    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

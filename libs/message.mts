@@ -13,13 +13,13 @@ export interface Message {
 }
 
 /**
- * Convert message
+ * Build message
  * @param filePath
  * @param users
  * @param showCutLine
  * @returns Message[]
  */
-export const convertMessages = async (
+export const buildMessage = async (
   filePath: string,
   users: User[],
   showCutLine: boolean
@@ -104,7 +104,7 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
  * @param messages
  * @returns Message[]
  */
-export const createMessages = async (
+export const createMessage = async (
   guild: Guild,
   channelId: string,
   messages: Message[]

@@ -12,7 +12,7 @@ export interface Category {
  * @param categories
  * @returns Category[]
  */
-export const createCategories = async (
+export const createCategory = async (
   discordBotToken: string,
   discordServerId: string,
   categories: Category[]
@@ -42,7 +42,7 @@ export const createCategories = async (
  * @param categories
  * @returns Category[]
  */
-export const deleteCategories = async (
+export const deleteCategory = async (
   discordBotToken: string,
   discordServerId: string,
   categories: Category[]

@@ -13,7 +13,7 @@ export interface Bot {
  * @param srcMessageFilePath
  * @returns string[]
  */
-export const getMessageBotIds = async (srcMessageFilePath: string) => {
+export const getMessageBotId = async (srcMessageFilePath: string) => {
   const srcMessageFile = await readFile(srcMessageFilePath, "utf8")
   const srcMessage: SlackMessage[] = JSON.parse(srcMessageFile)
   const botIds = srcMessage
@@ -25,12 +25,12 @@ export const getMessageBotIds = async (srcMessageFilePath: string) => {
 }
 
 /**
- * Convert Bot
+ * Get bot data
  * @param client
  * @param botIds
  * @returns Bot[]
  */
-export const convertBots = async (client: Client, botIds: string[]) => {
+export const getBot = async (client: Client, botIds: string[]) => {
   return await Promise.all(
     botIds.map(async (botId) => {
       const result = await client.bots.info({ bot: botId })

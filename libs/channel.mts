@@ -24,13 +24,13 @@ export interface Channel {
 }
 
 /**
- *  * Convert channel information
+ *  * Build channel
  * @param channelFilePath
  * @param srcMessageDirPath
  * @param distMessageDirPath
  * @returns Channel[]
  */
-export const convertChannels = async (
+export const buildChannel = async (
   channelFilePath: string,
   srcMessageDirPath: string,
   distMessageDirPath: string
@@ -83,7 +83,7 @@ export const convertChannels = async (
  * @param migrateArchive
  * @returns Channel[]
  */
-export const createChannels = async (
+export const createChannel = async (
   discordBotToken: string,
   discordServerId: string,
   channels: Channel[],
@@ -128,7 +128,7 @@ export const createChannels = async (
  * @param channels
  * @returns Channel[]
  */
-export const deleteChannels = async (
+export const deleteChannel = async (
   discordBotToken: string,
   discordServerId: string,
   channels: Channel[]

@@ -7,16 +7,16 @@
   "type": "module",
   "scripts": {
     "init": "node --loader ts-node/esm ./command/init.mts",
-    "convert": "run-s \"convert:*\"",
-    "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
-    "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
-    "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
+    "build": "run-s init \"build:*\"",
+    "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
+    "build:user": "node --loader ts-node/esm ./command/build/user.mts",
+    "build:message": "node --loader ts-node/esm ./command/build/message.mts",
     "deploy": "run-p \"deploy:*\"",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
-    "delete": "run-p \"deploy:*\"",
-    "delete:channel": "node --loader ts-node/esm ./command/delete/channel.mts",
-    "delete:message": "node --loader ts-node/esm ./command/delete/message.mts"
+    "destroy": "run-p \"deploy:*\"",
+    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
+    "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts"
   },
   "volta": {
     "node": "18.7.0",

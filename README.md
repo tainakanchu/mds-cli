@@ -22,10 +22,10 @@ flowchart LR
   discordBot(<img src='./docs/img/discord-bot.png' /><br><label>DiscordBot</label>)
   exportFile(<img src='./docs/img/export-file.png' /><br><label>Export File</label>)
 
-  exportFile <--> |Convert| msd
+  exportFile <--> |Build| msd
   msd <--> discordBot
   discordBot --> |Output| discord
-  msd <--> |Get Bot Info| slackBot
+  msd <--> |Get bot data| slackBot
   slackBot <--> slack
 ```
 
@@ -41,33 +41,29 @@ flowchart LR
 [初回設定](./docs/initial-setting.md)を設定完了後、下記のコマンドを順次実行する  
 
 ```zsh
-# 作業ディレクトリ初期化などの初期化処理をする
+# チャンネル、ユーザー、メッセージのデータファイルを作成する
+npm run build
+# or
 npm run init
-
-# Slackのチャンネルのデータファイルを、Discordに移行できるデータファイルに変換する
-npm run convert:channel
-
-# Slackのユーザーのデータファイルを、Discordに移行できるデータファイルに変換する
-npm run convert:user
-
-# Slackのメッセージのデータファイルを、Discordに移行できるデータファイルに変換する
-npm run convert:message
-
-# Discordにチャンネルを作成する
+npm run build:user
+npm run build:message
 npm run deploy:channel
 
-# Discordの作成したチャンネルにメッセージを作成する
+# チャンネル、メッセージを作成する
+npm run deploy
+# or
+npm run deploy:channel
 npm run deploy:message
 ```
 
 Discordへメッセージのデータの移行に失敗した場合は、それぞれ下記のコマンドを実行することでリセットできる  
 
 ```zsh
-# 作成したチャンネルを削除する
-npm run delete:channel
-
-# 作成したメッセージを削除する
-npm run delete:message
+# チャンネル、メッセージを削除する
+npm run destroy
+# or
+npm run destroy:channel
+npm run destroy:message
 ```
 
 ## 既知の問題

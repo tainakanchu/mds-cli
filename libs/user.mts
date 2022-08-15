@@ -18,11 +18,11 @@ export interface User {
 }
 
 /**
- * Convert user
+ * Build user
  * @param filePath
  * @returns User[]
  */
-export const convertUsers = async (filePath: string, bots: Bot[]) => {
+export const buildUsers = async (filePath: string, bots: Bot[]) => {
   await access(filePath, constants.R_OK)
   const usersFile = await readFile(filePath, "utf8")
   const users = JSON.parse(usersFile)

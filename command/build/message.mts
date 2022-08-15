@@ -6,7 +6,7 @@ import { constants } from "node:fs"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { convertMessages } from "../../libs/message.mjs"
+import { buildMessage } from "../../libs/message.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -24,7 +24,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Convert message data command")
+    .description("Build message data command")
     .requiredOption(
       "-sc, --show-cut-line [boolean]",
       "Whether to show cut line between message",
@@ -33,16 +33,16 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.loading("Check parameters")
+  spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { showCutLine } = options
   if (showCutLine === undefined) {
-    spinner.failed(null, "Required parameters are not found")
+    spinner.failed(null, "Required parameter are not found")
     process.exit(0)
   }
   spinner.success()
 
-  // Slackのチャンネルのデータを取得する
+  // チャンネルのデータを取得する
   spinner.loading("Get channel data")
   let channels: Channel[] = []
   try {
@@ -57,7 +57,7 @@ interface Options {
   spinner.success()
 
   // ユーザー名を取得する
-  spinner.loading("Get user data...")
+  spinner.loading("Get user data")
   let users: User[] = []
   try {
     await access(distUserFilePath, constants.R_OK)
@@ -68,8 +68,8 @@ interface Options {
   }
   spinner.success()
 
-  // Slackのメッセージを変換する
-  spinner.loading("Convert message data...")
+  // メッセージを作成する
+  spinner.loading("Build message data")
   try {
     await Promise.all(
       channels.map(
@@ -79,7 +79,7 @@ interface Options {
               async (slackMessageFilePath, index) => {
                 const discordChannelFilePath =
                   channel.discord.message_file_paths[index]
-                const messages = await convertMessages(
+                const messages = await buildMessage(
                   slackMessageFilePath,
                   users,
                   showCutLine

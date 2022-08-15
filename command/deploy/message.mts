@@ -8,7 +8,7 @@ import { Client, GatewayIntentBits } from "discord.js"
 import type { Guild } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { createMessages } from "../../libs/message.mjs"
+import { createMessage } from "../../libs/message.mjs"
 import type { Message } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -40,11 +40,11 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.loading("Check parameters")
+  spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.failed(null, "Required parameters are not found")
+    spinner.failed(null, "Required parameter are not found")
     process.exit(0)
   }
   spinner.success()
@@ -91,7 +91,7 @@ interface Options {
         const messages = JSON.parse(
           await readFile(messageFilePath, "utf8")
         ) as Message[]
-        const newMessages = await createMessages(
+        const newMessages = await createMessage(
           guild,
           channel.discord.channel_id,
           messages
