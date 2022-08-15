@@ -1,6 +1,6 @@
-# 機能要件
+# 移行できるものとできないもの
 
-## 実装済みの機能
+## 移行できるもの
 
 - Public/Privateチャンネルのメッセージの移行 <span style="color:crimson;">※1</span>
 - アーカイブされたチャンネルのメッセージの移行
@@ -17,7 +17,7 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <span style="color:crimson;">※3</span> `.migtation/user.json`に、DiscordのユーザーIDを手動で設定する必要があります
 
-## 実装されていない機能
+## 移行できないもの
 
 - SlackBotの移行
 - SlackのDM(ダイレクトメッセージ)の移行

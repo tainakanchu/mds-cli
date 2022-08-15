@@ -13,9 +13,7 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program
-    .description("Init process for migrating from slack to discord")
-    .parse(process.argv)
+  program.description("Init process command").parse(process.argv)
 
   // 作業ディレクトリ初期化
   spinner.start(pc.blue("Initializing working directory..."))

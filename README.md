@@ -31,8 +31,8 @@ flowchart LR
 
 ## ドキュメント
 
-- [機能](./docs/function.md)
-- [初回設定](./docs/initial-setting.md)
+- [移行できるものとできないもの](./docs/migration.md)
+- [初回設定](./docs/init.md)
 - [仕様](./docs/specification.md)
 - [参考リンク](./docs/reference.md)
 
@@ -60,14 +60,14 @@ npm run deploy:channel
 npm run deploy:message
 ```
 
-Discordへメッセージのデータの移行に失敗した場合は、下記のコマンドを実行することでリセットできる  
+Discordへメッセージのデータの移行に失敗した場合は、それぞれ下記のコマンドを実行することでリセットできる  
 
 ```zsh
-# 作成したメッセージを削除する
-npm run delete:message
-
 # 作成したチャンネルを削除する
 npm run delete:channel
+
+# 作成したメッセージを削除する
+npm run delete:message
 ```
 
 ## 既知の問題

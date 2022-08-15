@@ -20,7 +20,7 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program.description("Convert channel file").parse(process.argv)
+  program.description("Convert channel data command").parse(process.argv)
 
   // Slackのチャンネル情報を変換する
   spinner.start(pc.blue("Converting channel data..."))

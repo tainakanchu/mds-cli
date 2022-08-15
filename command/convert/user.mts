@@ -29,10 +29,10 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Convert user data")
+    .description("Convert user data command")
     .requiredOption(
       "-st, --slack-bot-token [string]",
-      "SlackBot oauth token",
+      "SlackBot OAuth Token",
       process.env.SLACK_BOT_TOKEN
     )
     .parse(process.argv)

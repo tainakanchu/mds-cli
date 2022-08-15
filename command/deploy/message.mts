@@ -28,15 +28,15 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Deploy message")
+    .description("Deploy message command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
-      "DiscordBot oauth token",
+      "DiscordBot OAuth Token",
       process.env.DISCORD_BOT_TOKEN
     )
     .requiredOption(
       "-ds, --discord-server-id [string]",
-      "Discord server id",
+      "Discord Server ID",
       process.env.DISCORD_SERVER_ID
     )
     .parse(process.argv)
