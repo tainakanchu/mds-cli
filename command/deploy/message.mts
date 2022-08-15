@@ -53,7 +53,7 @@ interface Options {
     isFailed = true
   }
   if (discordServerId === undefined) {
-    errorMessages.push("Discord Server Id is required")
+    errorMessages.push("Discord Server ID is required")
     isFailed = true
   }
 
