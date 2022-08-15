@@ -1,6 +1,6 @@
-# 移行できるものと移行しないもの
+# 移行されるものと移行されないもの
 
-## 移行できるもの
+## 移行されるもの
 
 - Public/Privateチャンネルのメッセージの移行 <span style="color:crimson;">※1</span>
 - アーカイブされたチャンネルのメッセージの移行
@@ -17,7 +17,7 @@ Privateチャンネルを含めた全てのチャンネルのエクスポート�
 
 <span style="color:crimson;">※3</span> `.migtation/user.json`に、DiscordのユーザーIDを手動で設定する必要があります
 
-## 移行しないもの
+## 移行されないもの
 
 - SlackBotの移行
 - SlackのDM(ダイレクトメッセージ)の移行
