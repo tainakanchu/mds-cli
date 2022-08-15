@@ -1,8 +1,6 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { readFile, access, mkdir, writeFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { readFile, access, mkdir, writeFile, constants } from "node:fs/promises"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"

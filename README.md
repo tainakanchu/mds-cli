@@ -68,19 +68,12 @@ npm run destroy:message
 
 ## 既知の問題
 
-### SlackBotのBotIdが照合できない
+### メッセージファイルとユーザーファイルのSlackBotのBotIdが照合できない
 
-エクスポートデータの`users.json`のBotIdとメッセージに記載されているBotIdが違います  
-[bots.info](https://api.slack.com/methods/bots.info)や[users.info](https://api.slack.com/methods/users.info)でどちらのBotIdで取得しても、updatedが1時間ほど違うだけでそれ以外の情報は同じです  
-BotIdは全てのボットが存在するすべてのワークスペースで一意だそうですが、BotIdがなぜか2つあるようで理由は不明です  
+エクスポートデータの`users.json`ユーザーファイルのBotIdとメッセージファイルに記載されているBotIdが違います  
+[bots.info](https://api.slack.com/methods/bots.info)や[users.info](https://api.slack.com/methods/users.info)のAPIで２つのBotIdを取得しても、updatedが1時間ほど違うだけでそれ以外の情報は同じです  
+BotIdは全てのボットが存在するすべてのワークスペースで一意だそうですが、BotIdがなぜ異なるのか理由は不明です  
 そのため、エクスポートデータだけではBotIdが照合できないので、照合するためにSlackBotを利用しています  
-
-### @types/nodeにfsPromise.constantsが無い
-
-下記のissueで修正反映待ち中  
-修正反映まではfs.constantsで代用  
-
-https://github.com/DefinitelyTyped/DefinitelyTyped/pull/61690
 
 ### 並列化・非同期化
 

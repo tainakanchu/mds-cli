@@ -1,6 +1,4 @@
-import { access, readFile, writeFile, mkdir } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"

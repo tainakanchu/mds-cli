@@ -1,6 +1,4 @@
-import { access, mkdir, writeFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { access, mkdir, writeFile, constants } from "node:fs/promises"
 import { dirname } from "node:path"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
 

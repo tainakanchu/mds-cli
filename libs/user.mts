@@ -1,6 +1,4 @@
-import { access, readFile, writeFile, mkdir } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname } from "node:path"
 import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
 import type { Bot } from "./bot.mjs"

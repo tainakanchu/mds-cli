@@ -1,8 +1,6 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { readFile, access } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { readFile, access, constants } from "node:fs/promises"
 import { resolve, join } from "node:path"
 import { Client, GatewayIntentBits } from "discord.js"
 import type { Guild } from "discord.js"
