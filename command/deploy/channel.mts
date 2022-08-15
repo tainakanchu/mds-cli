@@ -42,7 +42,7 @@ interface Options {
     .requiredOption(
       "-ma, --migrate-archive [boolean]",
       "Whether to migrate archive channel",
-      process.env.MIGRATE_ARCHIVE === "false" ? false : true
+      process.env.MIGRATE_ARCHIVE === "true" ? true : false
     )
     .parse(process.argv)
 
@@ -59,6 +59,10 @@ interface Options {
   }
   if (discordServerId === undefined) {
     errorMessages.push("Discord Server ID is required")
+    isFailed = true
+  }
+  if (migrateArchive === undefined) {
+    errorMessages.push("Migrate archive Flag is required")
     isFailed = true
   }
 
