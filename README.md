@@ -31,7 +31,7 @@ flowchart LR
 
 ## ドキュメント
 
-- [移行できるものとできないもの](./docs/migration.md)
+- [移行できるものと移行しないもの](./docs/migration.md)
 - [初回設定](./docs/init.md)
 - [仕様](./docs/specification.md)
 - [参考リンク](./docs/reference.md)

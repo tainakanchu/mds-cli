@@ -22,7 +22,7 @@ const spinner = new Spinner()
 interface Options {
   discordBotToken?: string
   discordServerId?: string
-  isMigrateArchive?: boolean
+  migrateArchive?: boolean
 }
 
 ;(async () => {

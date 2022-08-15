@@ -80,7 +80,7 @@ export const convertChannels = async (
  * @param channels
  * @param defaultCategory
  * @param archiveCategory
- * @param isMigrateArchive
+ * @param migrateArchive
  * @returns Channel[]
  */
 export const createChannels = async (
@@ -89,7 +89,7 @@ export const createChannels = async (
   channels: Channel[],
   defaultCategory: Category,
   archiveCategory: Category,
-  isMigrateArchive: boolean
+  migrateArchive: boolean
 ) => {
   const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
@@ -98,7 +98,7 @@ export const createChannels = async (
 
   const newChannels: Channel[] = []
   for (const channel of channels) {
-    if (!channel.slack.is_archived || isMigrateArchive) {
+    if (!channel.slack.is_archived || migrateArchive) {
       // チャンネルを作成する
       const result = await client.guilds.cache
         .get(discordServerId)

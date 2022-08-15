@@ -41,11 +41,11 @@ cp .envrc.sample .envrc
 .envrcの環境変数に、トークンやサーバーIDなどの情報を設定する  
 
 ```zsh
-export NODE_OPTIONS=--openssl-legacy-provider
-export IS_MIGRATE_ARCHIVE="true" # ← アーカイブされたチャンネルを移行しない場合はfalseを設定
-export SLACK_BOT_TOKEN="" # ← SlackBotのトークンを設定
-export DISCORD_BOT_TOKEN="" # ← DiscordBotのトークンを設定
-export DISCORD_SERVER_ID=""　# ← DiscordのサーバーIDを設定
+export SLACK_BOT_TOKEN="" # SlackBotのトークン
+export DISCORD_BOT_TOKEN="" # DiscordBotのトークン
+export DISCORD_SERVER_ID="" # DiscordのサーバーID
+export NODE_OPTIONS=--openssl-legacy-provider # ライブラリのOpenSSL互換エラー防止用のオプション
+export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
 ```
 
 下記のコマンドで、変更した環境変数の値を反映する  

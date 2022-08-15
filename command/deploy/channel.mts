@@ -22,7 +22,7 @@ const spinner = new Spinner()
 interface Options {
   discordBotToken?: string
   discordServerId?: string
-  isMigrateArchive?: boolean
+  migrateArchive?: boolean
 }
 
 ;(async () => {
@@ -40,16 +40,16 @@ interface Options {
       process.env.DISCORD_SERVER_ID
     )
     .requiredOption(
-      "-ma, --is-migrate-archive [boolean]",
+      "-ma, --migrate-archive [boolean]",
       "Whether to migrate archive channel",
-      process.env.IS_MIGRATE_ARCHIVE === "false" ? false : true
+      process.env.MIGRATE_ARCHIVE === "false" ? false : true
     )
     .parse(process.argv)
 
   // パラメーターの取得
   spinner.start(pc.blue("Checking parameters..."))
   const options: Options = program.opts()
-  const { discordBotToken, discordServerId, isMigrateArchive } = options
+  const { discordBotToken, discordServerId, migrateArchive } = options
   let isFailed = false
   const errorMessages = []
 
@@ -66,7 +66,7 @@ interface Options {
     isFailed ||
     discordBotToken === undefined ||
     discordServerId === undefined ||
-    isMigrateArchive === undefined
+    migrateArchive === undefined
   ) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
     console.error(pc.red(errorMessages.join("\n")))
@@ -142,7 +142,7 @@ interface Options {
       channels,
       defaultCategory,
       archiveCategory,
-      isMigrateArchive
+      migrateArchive
     )
   } catch (error) {
     spinner.stop(pc.blue("Creating channel... " + pc.red("Failed")))
