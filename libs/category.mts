@@ -1,8 +1,27 @@
+import { access, mkdir, writeFile } from "node:fs/promises"
+// TODO: 後でfsPromise.constantsを使うようにする
+import { constants } from "node:fs"
+import { dirname } from "node:path"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
 
 export interface Category {
   id: string
   name: string
+}
+
+/**
+ * Create category file
+ * @param distCategoryFilePath
+ * @param categories
+ */
+export const createCategoryFile = async (
+  distCategoryFilePath: string,
+  categories: Category[]
+) => {
+  await mkdir(dirname(distCategoryFilePath), {
+    recursive: true,
+  })
+  await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
 }
 
 /**

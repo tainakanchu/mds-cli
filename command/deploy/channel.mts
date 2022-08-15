@@ -1,13 +1,15 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { readFile, access, mkdir, writeFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { mkdir, writeFile } from "node:fs/promises"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createChannel } from "../../libs/channel.mjs"
+import {
+  createChannel,
+  getChannelFile,
+  createChannelFile,
+} from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { createCategory } from "../../libs/category.mjs"
+import { createCategory, createCategoryFile } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -54,27 +56,24 @@ interface Options {
     discordServerId === undefined ||
     migrateArchive === undefined
   ) {
-    spinner.failed(null, "Required parameter are not found")
+    spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
   spinner.success()
 
-  // チャンネル情報を取得する
-  spinner.loading("Get channel data")
+  // チャンネルファイルを取得する
+  spinner.loading("Get channel file")
   let channels: Channel[] = []
   try {
-    await access(distChannelFilePath, constants.R_OK)
-    channels = JSON.parse(
-      await readFile(distChannelFilePath, "utf8")
-    ) as Channel[]
+    channels = await getChannelFile(distChannelFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // Discordのチャンネルのカテゴリーを作成する
-  spinner.loading("Create category")
+  // チャンネルのカテゴリーを作成する
+  spinner.loading("Build category")
   let categories: Category[] = []
   let defaultCategory: Category | undefined = undefined
   let archiveCategory: Category | undefined = undefined
@@ -94,20 +93,17 @@ interface Options {
   }
   spinner.success()
 
-  // カテゴリー情報のファイルを作成する
-  spinner.loading("Create category data")
+  // カテゴリーファイルを作成する
+  spinner.loading("Create category file")
   try {
-    await mkdir(dirname(distCategoryFilePath), {
-      recursive: true,
-    })
-    await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
+    await createCategoryFile(distCategoryFilePath, categories)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // Discordのチャンネルを作成する
+  // チャンネルを作成する
   spinner.loading("Create channel")
   try {
     channels = await createChannel(
@@ -124,13 +120,10 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネル情報を更新する
-  spinner.loading("Update channel data")
+  // チャンネルファイルを更新する
+  spinner.loading("Update channel file")
   try {
-    await mkdir(dirname(distChannelFilePath), {
-      recursive: true,
-    })
-    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
+    await createChannelFile(distChannelFilePath, channels)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

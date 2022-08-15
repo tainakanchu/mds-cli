@@ -1,13 +1,11 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { writeFile, mkdir, access, readFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
-import { dirname, resolve, join } from "node:path"
+import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { buildUsers } from "../../libs/user.mjs"
+import { buildUser } from "../../libs/user.mjs"
+import { getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { getMessageBotId, getBot } from "../../libs/bot.mjs"
+import { getMessageBotId, getBotData } from "../../libs/bot.mjs"
 import type { Bot } from "../../libs/bot.mjs"
 import { WebClient } from "@slack/web-api"
 
@@ -28,7 +26,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Build user data command")
+    .description("Build user file command")
     .requiredOption(
       "-st, --slack-bot-token [string]",
       "SlackBot OAuth Token",
@@ -41,27 +39,24 @@ interface Options {
   const options: Options = program.opts()
   const { slackBotToken } = options
   if (slackBotToken === undefined) {
-    spinner.failed(null, "Required parameter are not found")
+    spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
   spinner.success()
 
-  // チャンネルのデータを取得する
-  spinner.loading("Get channel data")
+  // チャンネルファイルを取得する
+  spinner.loading("Get channel file")
   let channels: Channel[] = []
   try {
-    await access(distChannelFilePath, constants.R_OK)
-    channels = JSON.parse(
-      await readFile(distChannelFilePath, "utf8")
-    ) as Channel[]
+    channels = await getChannelFile(distChannelFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // メッセージ内のBotIdを取得する
-  spinner.loading("Get BotId in message")
+  // メッセージファイル内のBotIdを取得する
+  spinner.loading("Get BotId in message file")
   let botIds: string[] = []
   try {
     for (const channel of channels) {
@@ -81,21 +76,17 @@ interface Options {
   const client = new WebClient(slackBotToken)
   let bots: Bot[] = []
   try {
-    bots = await getBot(client, botIds)
+    bots = await getBotData(client, botIds)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success
 
-  // ユーザーのデータを作成する
-  spinner.loading("Build user data")
+  // ユーザーファイルを作成する
+  spinner.loading("Build user file")
   try {
-    const users = await buildUsers(srcUserFilePath, bots)
-    await mkdir(dirname(distUserFilePath), {
-      recursive: true,
-    })
-    await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
+    await buildUser(srcUserFilePath, distUserFilePath, bots)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

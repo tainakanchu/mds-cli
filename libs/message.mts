@@ -13,13 +13,13 @@ export interface Message {
 }
 
 /**
- * Build message
+ * Build message file
  * @param filePath
  * @param users
  * @param showCutLine
  * @returns Message[]
  */
-export const buildMessage = async (
+export const buildMessageFile = async (
   filePath: string,
   users: User[],
   showCutLine: boolean

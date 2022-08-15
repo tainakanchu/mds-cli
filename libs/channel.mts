@@ -1,7 +1,7 @@
-import { access, readFile } from "node:fs/promises"
+import { access, readFile, writeFile, mkdir } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType, Client, GatewayIntentBits } from "discord.js"
 import type { Category } from "./category.mjs"
@@ -24,23 +24,50 @@ export interface Channel {
 }
 
 /**
- *  * Build channel
- * @param channelFilePath
+ * Get channel file
+ * @param distChannelFilePath
+ * @returns Channel[]
+ */
+export const getChannelFile = async (distChannelFilePath: string) => {
+  await access(distChannelFilePath, constants.R_OK)
+  return JSON.parse(await readFile(distChannelFilePath, "utf8")) as Channel[]
+}
+
+/**
+ * Create channel file
+ * @param distChannelFilePath
+ * @param channels
+ */
+export const createChannelFile = async (
+  distChannelFilePath: string,
+  channels: Channel[]
+) => {
+  await mkdir(dirname(distChannelFilePath), {
+    recursive: true,
+  })
+  await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
+}
+
+/**
+ *  * Build channel file
+ * @param srcChannelFilePath
+ * @param distChannelFilePath
  * @param srcMessageDirPath
  * @param distMessageDirPath
  * @returns Channel[]
  */
-export const buildChannel = async (
-  channelFilePath: string,
+export const buildChannelFile = async (
+  srcChannelFilePath: string,
+  distChannelFilePath: string,
   srcMessageDirPath: string,
   distMessageDirPath: string
 ) => {
-  await access(channelFilePath, constants.R_OK)
+  await access(srcChannelFilePath, constants.R_OK)
   const slackChannels = JSON.parse(
-    await readFile(channelFilePath, "utf8")
+    await readFile(srcChannelFilePath, "utf8")
   ) as SlackChannel[]
 
-  const newChannels: Channel[] = []
+  const channels: Channel[] = []
   for (const channel of slackChannels) {
     if (channel.name) {
       // Slackのメッセージファイルのパスを取得する
@@ -53,7 +80,7 @@ export const buildChannel = async (
         messageFilePath.replace(srcMessageDirPath, distMessageDirPath)
       )
 
-      newChannels.push({
+      channels.push({
         slack: {
           channel_id: channel.id || "",
           channel_name: channel.name || "",
@@ -70,7 +97,13 @@ export const buildChannel = async (
       })
     }
   }
-  return newChannels
+
+  await mkdir(dirname(distChannelFilePath), {
+    recursive: true,
+  })
+  await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
+
+  return channels
 }
 
 /**

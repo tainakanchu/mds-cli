@@ -44,7 +44,7 @@ interface Options {
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.failed(null, "Required parameter are not found")
+    spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
   spinner.success()

@@ -9,6 +9,25 @@ export interface Bot {
 }
 
 /**
+ * Get bot data
+ * @param client
+ * @param botIds
+ * @returns Bot[]
+ */
+export const getBotData = async (client: Client, botIds: string[]) => {
+  return await Promise.all(
+    botIds.map(async (botId) => {
+      const result = await client.bots.info({ bot: botId })
+      return {
+        id: result.bot?.id || "",
+        app_id: result.bot?.app_id || "",
+        name: result.bot?.name || "",
+      } as Bot
+    })
+  )
+}
+
+/**
  * Get BotId in message
  * @param srcMessageFilePath
  * @returns string[]
@@ -22,23 +41,4 @@ export const getMessageBotId = async (srcMessageFilePath: string) => {
 
   // 重複は排除する
   return [...new Set(botIds)]
-}
-
-/**
- * Get bot data
- * @param client
- * @param botIds
- * @returns Bot[]
- */
-export const getBot = async (client: Client, botIds: string[]) => {
-  return await Promise.all(
-    botIds.map(async (botId) => {
-      const result = await client.bots.info({ bot: botId })
-      return {
-        id: result.bot?.id || "",
-        app_id: result.bot?.app_id || "",
-        name: result.bot?.name || "",
-      } as Bot
-    })
-  )
 }

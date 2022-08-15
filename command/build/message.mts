@@ -1,12 +1,12 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { writeFile, mkdir, readFile, access } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { writeFile, mkdir } from "node:fs/promises"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
+import { getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { buildMessage } from "../../libs/message.mjs"
+import { buildMessageFile } from "../../libs/message.mjs"
+import { getUserFile } from "../../libs/user.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -24,7 +24,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Build message data command")
+    .description("Build message file command")
     .requiredOption(
       "-sc, --show-cut-line [boolean]",
       "Whether to show cut line between message",
@@ -37,39 +37,35 @@ interface Options {
   const options: Options = program.opts()
   const { showCutLine } = options
   if (showCutLine === undefined) {
-    spinner.failed(null, "Required parameter are not found")
+    spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
   spinner.success()
 
-  // チャンネルのデータを取得する
-  spinner.loading("Get channel data")
+  // チャンネルファイルを取得する
+  spinner.loading("Get channel file")
   let channels: Channel[] = []
   try {
-    await access(distChannelFilePath, constants.R_OK)
-    channels = JSON.parse(
-      await readFile(distChannelFilePath, "utf8")
-    ) as Channel[]
+    channels = await getChannelFile(distChannelFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // ユーザー名を取得する
-  spinner.loading("Get user data")
+  // ユーザーファイルを取得する
+  spinner.loading("Get user file")
   let users: User[] = []
   try {
-    await access(distUserFilePath, constants.R_OK)
-    users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
+    users = await getUserFile(distUserFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // メッセージを作成する
-  spinner.loading("Build message data")
+  // メッセージファイルを作成する
+  spinner.loading("Build message file")
   try {
     await Promise.all(
       channels.map(
@@ -79,7 +75,7 @@ interface Options {
               async (slackMessageFilePath, index) => {
                 const discordChannelFilePath =
                   channel.discord.message_file_paths[index]
-                const messages = await buildMessage(
+                const messages = await buildMessageFile(
                   slackMessageFilePath,
                   users,
                   showCutLine

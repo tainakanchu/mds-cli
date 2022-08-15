@@ -1,6 +1,7 @@
-import { access, readFile } from "node:fs/promises"
+import { access, readFile, writeFile, mkdir } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
+import { dirname } from "node:path"
 import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
 import type { Bot } from "./bot.mjs"
 
@@ -18,13 +19,27 @@ export interface User {
 }
 
 /**
- * Build user
- * @param filePath
+ * Get user
+ * @param distUserFilePath
  * @returns User[]
  */
-export const buildUsers = async (filePath: string, bots: Bot[]) => {
-  await access(filePath, constants.R_OK)
-  const usersFile = await readFile(filePath, "utf8")
+export const getUserFile = async (distUserFilePath: string) => {
+  await access(distUserFilePath, constants.R_OK)
+  return JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
+}
+
+/**
+ * Build user
+ * @param srcUserFilePath
+ * @returns User[]
+ */
+export const buildUser = async (
+  srcUserFilePath: string,
+  distUserFilePath: string,
+  bots: Bot[]
+) => {
+  await access(srcUserFilePath, constants.R_OK)
+  const usersFile = await readFile(srcUserFilePath, "utf8")
   const users = JSON.parse(usersFile)
     .map((user: SlackUser) => {
       let id = user.id || ""
@@ -53,5 +68,10 @@ export const buildUsers = async (filePath: string, bots: Bot[]) => {
       } as User
     })
     .sort((user: User) => !user.slack.is_bot || !user.slack.deleted)
+
+  await mkdir(dirname(distUserFilePath), {
+    recursive: true,
+  })
+  await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
   return users
 }

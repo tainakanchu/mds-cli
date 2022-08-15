@@ -5,7 +5,7 @@ import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 import { constants } from "node:fs"
 import { resolve, join, dirname } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { deleteChannel } from "../../libs/channel.mjs"
+import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
 import { deleteCategory } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
@@ -44,27 +44,24 @@ interface Options {
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.failed(null, "Required parameter are not found")
+    spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
   spinner.success()
 
-  // チャンネル情報を取得する
-  spinner.loading("Get channel data")
+  // チャンネルファイルを取得する
+  spinner.loading("Get channel file")
   let channels: Channel[] = []
   try {
-    await access(distChannelFilePath, constants.R_OK)
-    channels = JSON.parse(
-      await readFile(distChannelFilePath, "utf8")
-    ) as Channel[]
+    channels = await getChannelFile(distChannelFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
-  // カテゴリー情報を取得する
-  spinner.loading("Get category data")
+  // カテゴリーファイルを取得する
+  spinner.loading("Get category file")
   let categories: Category[] = []
   try {
     await access(distCategoryFilePath, constants.R_OK)
@@ -77,7 +74,7 @@ interface Options {
   }
   spinner.success()
 
-  // Discordのチャンネルを削除する
+  // チャンネルを削除する
   spinner.loading("Delete channel")
   try {
     channels = await deleteChannel(discordBotToken, discordServerId, channels)
@@ -87,8 +84,8 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネル情報を更新する
-  spinner.loading("Update channel data")
+  // チャンネルファイルを更新する
+  spinner.loading("Update channel file")
   try {
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
