@@ -44,25 +44,9 @@ interface Options {
   spinner.start(pc.blue("Checking parameters..."))
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
-  let isFailed = false
-  const errorMessages = []
-
-  if (discordBotToken === undefined) {
-    errorMessages.push("DiscordBot OAuth Token is required")
-    isFailed = true
-  }
-  if (discordServerId === undefined) {
-    errorMessages.push("Discord Server ID is required")
-    isFailed = true
-  }
-
-  if (
-    isFailed ||
-    discordBotToken === undefined ||
-    discordServerId === undefined
-  ) {
+  if (discordBotToken === undefined || discordServerId === undefined) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red(errorMessages.join("\n")))
+    console.error(pc.red("Required parameters are not found"))
     process.exit(0)
   }
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))

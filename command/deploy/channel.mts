@@ -50,30 +50,13 @@ interface Options {
   spinner.start(pc.blue("Checking parameters..."))
   const options: Options = program.opts()
   const { discordBotToken, discordServerId, migrateArchive } = options
-  let isFailed = false
-  const errorMessages = []
-
-  if (discordBotToken === undefined) {
-    errorMessages.push("DiscordBot OAuth Token is required")
-    isFailed = true
-  }
-  if (discordServerId === undefined) {
-    errorMessages.push("Discord Server ID is required")
-    isFailed = true
-  }
-  if (migrateArchive === undefined) {
-    errorMessages.push("Migrate archive Flag is required")
-    isFailed = true
-  }
-
   if (
-    isFailed ||
     discordBotToken === undefined ||
     discordServerId === undefined ||
     migrateArchive === undefined
   ) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red(errorMessages.join("\n")))
+    console.error(pc.red("Required parameters are not found"))
     process.exit(0)
   }
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))

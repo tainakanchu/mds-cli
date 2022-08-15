@@ -43,7 +43,7 @@ interface Options {
   const { slackBotToken } = options
   if (slackBotToken === undefined) {
     spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red("SlackBot OAuth Token is required"))
+    console.error(pc.red("Required parameters are not found"))
     process.exit(0)
   }
   spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
