@@ -1,34 +1,71 @@
 import { clearLine, cursorTo } from "readline"
+import pc from "picocolors"
 
 export class Spinner {
-  stream: NodeJS.WriteStream & { fd: 1 } = process.stdout
-  text: string = ""
-  chars: string = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-  charIndex: number = 0
-  delay: number = 60
-  id?: NodeJS.Timer
+  private stream: NodeJS.WriteStream & { fd: 1 } = process.stdout
+  private text: string = ""
+  chars = {
+    loading: "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏",
+    success: "✔️",
+    failed: "×",
+  }
+  private charsType: "loading" | "success" | "failed" = "loading"
+  private charIndex: number = 0
+  private delay: number = 60
+  private id?: NodeJS.Timer
 
-  private reset() {
+  private resetLine() {
     clearLine(this.stream, 0)
     cursorTo(this.stream, 0)
   }
 
   private write() {
-    const message = `${this.chars[this.charIndex]} ${this.text}`
-    this.reset()
-    this.stream.write(message)
-    this.charIndex = (this.charIndex + 1) % this.chars.length
+    this.resetLine()
+    const chars = this.chars[this.charsType]
+    let char = chars[this.charIndex]
+    if (this.charsType === "loading") {
+      char = pc.gray(char)
+    } else if (this.charsType === "success") {
+      char = pc.green(char)
+    } else if (this.charsType === "failed") {
+      char = pc.red(char)
+    }
+    this.stream.write(char + " " + pc.blue(this.text))
+    this.charIndex = (this.charIndex + 1) % chars.length
   }
 
-  start(text: string) {
-    this.text = text
+  private start() {
     this.id = setInterval(this.write.bind(this), this.delay)
   }
 
-  stop(text: string) {
-    clearLine(this.stream, 0)
-    cursorTo(this.stream, 0)
-    this.stream.write(text + "\n")
+  private stop() {
+    this.resetLine()
     clearInterval(this.id)
+  }
+
+  loading(text?: string) {
+    this.stop()
+    if (text) this.text = text
+    if (this.text === "") this.text = "Loading"
+    this.charsType = "loading"
+    this.start()
+  }
+
+  success(text?: string | null, message?: any) {
+    this.stop()
+    if (text) this.text = text
+    if (this.text === "") this.text = "Success"
+    this.charsType = "success"
+    console.log(pc.green(this.chars.success) + " " + pc.blue(this.text))
+    if (message) console.log(message)
+  }
+
+  failed(text?: string | null, message?: any) {
+    this.stop()
+    if (text) this.text = text
+    if (this.text === "") this.text = "Failed"
+    this.charsType = "failed"
+    console.log(pc.red(this.chars.failed) + " " + pc.blue(this.text))
+    if (message) console.error(message)
   }
 }

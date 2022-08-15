@@ -1,6 +1,5 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import pc from "picocolors"
 import { writeFile, mkdir } from "node:fs/promises"
 import { dirname, resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
@@ -23,7 +22,7 @@ const spinner = new Spinner()
   program.description("Convert channel data command").parse(process.argv)
 
   // Slackのチャンネル情報を変換する
-  spinner.start(pc.blue("Converting channel data..."))
+  spinner.loading("Convert channel data")
   let newChannels: Channel[] = []
   try {
     newChannels = await convertChannels(
@@ -36,11 +35,10 @@ const spinner = new Spinner()
     })
     await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
-    spinner.stop(pc.blue("Converting channel data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Converting channel data... " + pc.green("Success")))
+  spinner.success()
 
   process.exit(0)
 })()

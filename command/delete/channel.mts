@@ -1,6 +1,5 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import pc from "picocolors"
 import { readFile, access, mkdir, writeFile } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
@@ -41,18 +40,17 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.start(pc.blue("Checking parameters..."))
+  spinner.loading("Check parameters")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red("Required parameters are not found"))
+    spinner.failed(null, "Required parameters are not found")
     process.exit(0)
   }
-  spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
+  spinner.success()
 
   // チャンネル情報を取得する
-  spinner.start(pc.blue("Getting channel data..."))
+  spinner.loading("Get channel data")
   let channels: Channel[] = []
   try {
     await access(distChannelFilePath, constants.R_OK)
@@ -60,14 +58,13 @@ interface Options {
       await readFile(distChannelFilePath, "utf8")
     ) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
+  spinner.success()
 
   // カテゴリー情報を取得する
-  spinner.start(pc.blue("Getting category data..."))
+  spinner.loading("Get category data")
   let categories: Category[] = []
   try {
     await access(distCategoryFilePath, constants.R_OK)
@@ -75,14 +72,13 @@ interface Options {
       await readFile(distCategoryFilePath, "utf8")
     ) as Category[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting category data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting category data... " + pc.green("Success")))
+  spinner.success()
 
   // Discordのチャンネルを削除する
-  spinner.start(pc.blue("Deleting channel..."))
+  spinner.loading("Delete channel")
   let newChannels: Channel[] = []
   try {
     newChannels = await deleteChannels(
@@ -91,28 +87,26 @@ interface Options {
       channels
     )
   } catch (error) {
-    spinner.stop(pc.blue("Deleting channel... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Deleting channel... " + pc.green("Success")))
+  spinner.success()
 
   // チャンネル情報を更新する
-  spinner.start(pc.blue("Updating channel data..."))
+  spinner.loading("Update channel data")
   try {
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
     })
     await writeFile(distChannelFilePath, JSON.stringify(newChannels, null, 2))
   } catch (error) {
-    spinner.stop(pc.blue("Updating channel data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Updating channel data... " + pc.green("Success")))
+  spinner.success()
 
   // Discordのカテゴリーを削除する
-  spinner.start(pc.blue("Deleting category..."))
+  spinner.loading("Delete category")
   let newCategories: Category[] = []
   try {
     newCategories = await deleteCategories(
@@ -121,14 +115,13 @@ interface Options {
       categories
     )
   } catch (error) {
-    spinner.stop(pc.blue("Deleting category... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Deleting category... " + pc.green("Success")))
+  spinner.success()
 
   // カテゴリー情報のファイルを更新する
-  spinner.start(pc.blue("Updating category data..."))
+  spinner.loading("Update category data")
   try {
     await mkdir(dirname(distCategoryFilePath), {
       recursive: true,
@@ -138,11 +131,10 @@ interface Options {
       JSON.stringify(newCategories, null, 2)
     )
   } catch (error) {
-    spinner.stop(pc.blue("Updating category data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Updating category data... " + pc.green("Success")))
+  spinner.success()
 
   process.exit(0)
 })()

@@ -1,6 +1,5 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import pc from "picocolors"
 import { writeFile, mkdir, readFile, access } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
@@ -34,18 +33,17 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.start(pc.blue("Checking parameters..."))
+  spinner.loading("Check parameters")
   const options: Options = program.opts()
   const { showCutLine } = options
   if (showCutLine === undefined) {
-    spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red("Required parameters are not found"))
+    spinner.failed(null, "Required parameters are not found")
     process.exit(0)
   }
-  spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
+  spinner.success()
 
   // Slackのチャンネルのデータを取得する
-  spinner.start(pc.blue("Getting channel data..."))
+  spinner.loading("Get channel data")
   let channels: Channel[] = []
   try {
     await access(distChannelFilePath, constants.R_OK)
@@ -53,27 +51,25 @@ interface Options {
       await readFile(distChannelFilePath, "utf8")
     ) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
+  spinner.success()
 
   // ユーザー名を取得する
-  spinner.start(pc.blue("Getting user data..."))
+  spinner.loading("Get user data...")
   let users: User[] = []
   try {
     await access(distUserFilePath, constants.R_OK)
     users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting user data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting user data... " + pc.green("Success")))
+  spinner.success()
 
   // Slackのメッセージを変換する
-  spinner.start(pc.blue("Converting message data..."))
+  spinner.loading("Convert message data...")
   try {
     await Promise.all(
       channels.map(
@@ -101,11 +97,10 @@ interface Options {
       )
     )
   } catch (error) {
-    spinner.stop(pc.blue("Converting message data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Converting message data... " + pc.green("Success")))
+  spinner.success()
 
   process.exit(0)
 })()

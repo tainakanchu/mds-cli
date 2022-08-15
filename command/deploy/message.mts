@@ -1,6 +1,5 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import pc from "picocolors"
 import { readFile, access } from "node:fs/promises"
 // TODO: 後でfsPromise.constantsを使うようにする
 import { constants } from "node:fs"
@@ -41,18 +40,17 @@ interface Options {
     .parse(process.argv)
 
   // パラメーターの取得
-  spinner.start(pc.blue("Checking parameters..."))
+  spinner.loading("Check parameters")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
-    spinner.stop(pc.blue("Checking parameters... " + pc.red("Failed")))
-    console.error(pc.red("Required parameters are not found"))
+    spinner.failed(null, "Required parameters are not found")
     process.exit(0)
   }
-  spinner.stop(pc.blue("Checking parameters... " + pc.green("Success")))
+  spinner.success()
 
   // Discordのクライアントを認証する
-  spinner.start(pc.blue("Authenticating discord..."))
+  spinner.loading("Authenticate discord")
   let guild: Guild | undefined = undefined
   try {
     const client = new Client({
@@ -61,19 +59,17 @@ interface Options {
     await client.login(discordBotToken)
     guild = client.guilds.cache.get(discordServerId)
   } catch (error) {
-    spinner.stop(pc.blue("Authenticating discord... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
   if (!guild) {
-    spinner.stop(pc.blue("Authenticating discord... " + pc.red("Failed")))
-    console.error("Guild not found")
+    spinner.failed(null, "Guild not found")
     process.exit(0)
   }
-  spinner.stop(pc.blue("Authenticating discord... " + pc.green("Success")))
+  spinner.success()
 
   // チャンネル情報を取得する
-  spinner.start(pc.blue("Getting channel data..."))
+  spinner.loading("Get channel data")
   let channels: Channel[] = []
   try {
     await access(distChannelFilePath, constants.R_OK)
@@ -81,14 +77,13 @@ interface Options {
       await readFile(distChannelFilePath, "utf8")
     ) as Channel[]
   } catch (error) {
-    spinner.stop(pc.blue("Getting channel data... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Getting channel data... " + pc.green("Success")))
+  spinner.success()
 
   // メッセージを作成する
-  spinner.start(pc.blue("Creating message..."))
+  spinner.loading("Create message")
   try {
     for (const channel of channels) {
       for (const messageFilePath of channel.discord.message_file_paths) {
@@ -104,11 +99,10 @@ interface Options {
       }
     }
   } catch (error) {
-    spinner.stop(pc.blue("Creating message... " + pc.red("Failed")))
-    console.error(error)
+    spinner.failed(null, error)
     process.exit(0)
   }
-  spinner.stop(pc.blue("Creating message... " + pc.green("Success")))
+  spinner.success()
 
   process.exit(0)
 })()
