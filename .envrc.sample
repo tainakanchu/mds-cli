@@ -3,3 +3,4 @@ export DISCORD_BOT_TOKEN="" # DiscordBot OAuth Token
 export DISCORD_SERVER_ID="" # DiscordBot OAuth Token
 export NODE_OPTIONS=--openssl-legacy-provider # Prevent OpenSSL compatibility errors
 export MIGRATE_ARCHIVE="true" # Whether to migrate archive channel
+export SHOW_CUT_LINE="true" # Whether to show cut line between message
