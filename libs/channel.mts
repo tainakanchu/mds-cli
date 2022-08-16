@@ -10,13 +10,15 @@ export interface Channel {
   slack: {
     channel_id: string
     channel_name: string
-    is_archived: boolean
+    archived: boolean
     purpose: string
     message_file_paths: string[]
   }
   discord: {
     channel_id: string
     channel_name: string
+    archived: boolean
+    deleted: boolean
     topic: string
     message_file_paths: string[]
   }
@@ -108,13 +110,15 @@ export const buildChannelFile = async (
           slack: {
             channel_id: channel.id || "",
             channel_name: channel.name || "",
-            is_archived: channel.is_archived || false,
+            archived: channel.is_archived || false,
             purpose: channel.purpose?.value ? channel.purpose.value : "",
             message_file_paths: srcMessageFilePaths,
           },
           discord: {
             channel_id: "",
             channel_name: channel.name || "",
+            archived: channel.is_archived || false,
+            deleted: false,
             topic: channel.purpose?.value ? channel.purpose.value : "",
             message_file_paths: distMessageFilePaths,
           },
@@ -164,12 +168,12 @@ export const createChannel = async (
     // チャンネルを作成する
     const newChannels: Channel[] = []
     for (const channel of channels) {
-      if (!channel.slack.is_archived || migrateArchive) {
+      if (!channel.discord.archived || migrateArchive) {
         const result = await discordGuild.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           topic: channel.discord.topic ? channel.discord.topic : undefined,
-          parent: channel.slack.is_archived
+          parent: channel.discord.archived
             ? archiveCategory.id
             : defaultCategory.id,
         })
@@ -218,7 +222,7 @@ export const deleteChannel = async (
     const newChannels: Channel[] = []
     for (const channel of channels) {
       await discordGuild.channels.delete(channel.discord.channel_id)
-      channel.discord.channel_id = ""
+      channel.discord.deleted = true
       newChannels.push(channel)
     }
 
