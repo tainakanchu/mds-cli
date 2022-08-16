@@ -2,9 +2,8 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { readFile, access, constants } from "node:fs/promises"
 import { resolve, join } from "node:path"
-import { Client, GatewayIntentBits } from "discord.js"
-import type { Guild } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
+import { createDiscordGuild } from "../../libs/util/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import { createMessage } from "../../libs/message.mjs"
 import type { Message } from "../../libs/message.mjs"
@@ -47,21 +46,12 @@ interface Options {
   }
   spinner.success()
 
-  // Discordのクライアントを認証する
-  spinner.loading("Authenticate discord")
-  let guild: Guild | undefined = undefined
-  try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    })
-    await client.login(discordBotToken)
-    guild = client.guilds.cache.get(discordServerId)
-  } catch (error) {
-    spinner.failed(null, error)
-    process.exit(0)
-  }
-  if (!guild) {
-    spinner.failed(null, "Guild not found")
+  // Discordのギルドを作成する
+  spinner.loading("Create discord guild")
+  const { discordGuild, ...createDiscordGuildResult } =
+    await createDiscordGuild(discordBotToken, discordServerId)
+  if (!discordGuild || createDiscordGuildResult.status === "failed") {
+    spinner.failed(null, createDiscordGuildResult.message)
     process.exit(0)
   }
   spinner.success()
@@ -87,7 +77,7 @@ interface Options {
           await readFile(messageFilePath, "utf8")
         ) as Message[]
         const newMessages = await createMessage(
-          guild,
+          discordGuild,
           channel.discord.channel_id,
           messages
         )

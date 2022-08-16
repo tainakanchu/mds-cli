@@ -1,6 +1,7 @@
 import { access, mkdir, writeFile, constants, readFile } from "node:fs/promises"
 import { dirname } from "node:path"
-import { ChannelType, Client, GatewayIntentBits } from "discord.js"
+import { ChannelType } from "discord.js"
+import type { Guild } from "discord.js"
 
 export interface Category {
   id: string
@@ -54,13 +55,11 @@ export const createCategoryFile = async (
 
 /**
  * Create category
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param categories
  */
 export const createCategory = async (
-  discordBotToken: string,
-  discordServerId: string,
+  discordGuild: Guild,
   categories: Category[]
 ): Promise<{
   categories: Category[]
@@ -68,19 +67,12 @@ export const createCategory = async (
   message?: any
 }> => {
   try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    })
-    await client.login(discordBotToken)
-
     const newCategories: Category[] = []
     for (const category of categories) {
-      const rusult = await client.guilds.cache
-        .get(discordServerId)
-        ?.channels.create({
-          name: category.name,
-          type: ChannelType.GuildCategory,
-        })
+      const rusult = await discordGuild.channels.create({
+        name: category.name,
+        type: ChannelType.GuildCategory,
+      })
       newCategories.push({
         id: rusult?.id ? rusult.id : "",
         name: category.name,
@@ -94,13 +86,11 @@ export const createCategory = async (
 
 /**
  * Delete category
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param categories
  */
 export const deleteCategory = async (
-  discordBotToken: string,
-  discordServerId: string,
+  discordGuild: Guild,
   categories: Category[]
 ): Promise<{
   categories: Category[]
@@ -109,16 +99,10 @@ export const deleteCategory = async (
 }> => {
   const newCategories: Category[] = []
   try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    })
-    await client.login(discordBotToken)
     for (const category of categories) {
       if (category.id) {
         // カテゴリーを削除する
-        await client.guilds.cache
-          .get(discordServerId)
-          ?.channels.delete(category.id)
+        await discordGuild.channels.delete(category.id)
         // カテゴリーのIDを削除する
         category.id = ""
       }

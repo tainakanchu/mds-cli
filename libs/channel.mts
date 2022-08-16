@@ -1,7 +1,8 @@
 import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
-import { ChannelType, Client, GatewayIntentBits } from "discord.js"
+import { ChannelType } from "discord.js"
+import type { Guild } from "discord.js"
 import type { Category } from "./category.mjs"
 import { getMessageFilePaths } from "./message.mjs"
 
@@ -132,16 +133,14 @@ export const buildChannelFile = async (
 
 /**
  * Create channel
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param channels
  * @param defaultCategory
  * @param archiveCategory
  * @param migrateArchive
  */
 export const createChannel = async (
-  discordBotToken: string,
-  discordServerId: string,
+  discordGuild: Guild,
   channels: Channel[],
   defaultCategory: Category,
   archiveCategory: Category,
@@ -152,34 +151,23 @@ export const createChannel = async (
   message?: any
 }> => {
   const newChannels: Channel[] = []
-
   try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    })
-    await client.login(discordBotToken)
-
     for (const channel of channels) {
       if (!channel.slack.is_archived || migrateArchive) {
         // チャンネルを作成する
-        const result = await client.guilds.cache
-          .get(discordServerId)
-          ?.channels.create({
-            name: channel.discord.channel_name,
-            type: ChannelType.GuildText,
-            topic: channel.discord.topic ? channel.discord.topic : undefined,
-            parent: channel.slack.is_archived
-              ? archiveCategory.id
-              : defaultCategory.id,
-          })
+        const result = await discordGuild.channels.create({
+          name: channel.discord.channel_name,
+          type: ChannelType.GuildText,
+          topic: channel.discord.topic ? channel.discord.topic : undefined,
+          parent: channel.slack.is_archived
+            ? archiveCategory.id
+            : defaultCategory.id,
+        })
         // チャンネルのIDを更新する
-        if (result?.id) {
-          channel.discord.channel_id = result.id
-        }
+        channel.discord.channel_id = result.id
         newChannels.push(channel)
       }
     }
-
     return { channels: newChannels, status: "success" }
   } catch (error) {
     return { channels: newChannels, status: "failed", message: error }
@@ -188,13 +176,11 @@ export const createChannel = async (
 
 /**
  * Delete channel
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param channels
  */
 export const deleteChannel = async (
-  discordBotToken: string,
-  discordServerId: string,
+  discordGuild: Guild,
   channels: Channel[]
 ): Promise<{
   channels: Channel[]
@@ -203,15 +189,9 @@ export const deleteChannel = async (
 }> => {
   const newChannels: Channel[] = []
   try {
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-    })
-    await client.login(discordBotToken)
     for (const channel of channels) {
       // チャンネルを削除する
-      await client.guilds.cache
-        .get(discordServerId)
-        ?.channels.delete(channel.discord.channel_id)
+      await discordGuild.channels.delete(channel.discord.channel_id)
       // チャンネルのIDを削除する
       channel.discord.channel_id = ""
       newChannels.push(channel)

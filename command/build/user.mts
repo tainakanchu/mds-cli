@@ -5,7 +5,7 @@ import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildUser } from "../../libs/user.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import { getMessageBotId, getBotData } from "../../libs/bot.mjs"
-import { WebClient } from "@slack/web-api"
+import { createSlackClient } from "../../libs/util/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const srcDirPath = resolve(__dirname, "../../../.src/")
@@ -42,6 +42,16 @@ interface Options {
   }
   spinner.success()
 
+  // Slackのクライアントを作成する
+  spinner.loading("Create slack client")
+  const { slackClient, ...createSlackClientResult } =
+    createSlackClient(slackBotToken)
+  if (!slackClient || createSlackClientResult.status === "failed") {
+    spinner.failed(null, createSlackClientResult.message)
+    process.exit(0)
+  }
+  spinner.success()
+
   // チャンネルファイルを取得する
   spinner.loading("Get channel file")
   const { channels, ...getChannelFileResult } = await getChannelFile(
@@ -64,8 +74,7 @@ interface Options {
 
   // Botのデータを取得する
   spinner.loading("Get bot data")
-  const client = new WebClient(slackBotToken)
-  const { bots, ...getBotDataResult } = await getBotData(client, botIds)
+  const { bots, ...getBotDataResult } = await getBotData(slackClient, botIds)
   if (getBotDataResult.status === "failed") {
     spinner.failed(null, getBotDataResult.message)
     process.exit(0)

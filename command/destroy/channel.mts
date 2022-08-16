@@ -2,6 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
+import { createDiscordGuild } from "../../libs/util/client.mjs"
 import {
   createChannelFile,
   deleteChannel,
@@ -52,6 +53,16 @@ interface Options {
   }
   spinner.success()
 
+  // Discordのギルドを作成する
+  spinner.loading("Create discord guild")
+  const { discordGuild, ...createDiscordGuildResult } =
+    await createDiscordGuild(discordBotToken, discordServerId)
+  if (!discordGuild || createDiscordGuildResult.status === "failed") {
+    spinner.failed(null, createDiscordGuildResult.message)
+    process.exit(0)
+  }
+  spinner.success()
+
   // チャンネルファイルを取得する
   spinner.loading("Get channel file")
   const { channels, ...getChannelFileResult } = await getChannelFile(
@@ -76,11 +87,7 @@ interface Options {
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  const deleteChannelResult = await deleteChannel(
-    discordBotToken,
-    discordServerId,
-    channels
-  )
+  const deleteChannelResult = await deleteChannel(discordGuild, channels)
   if (deleteChannelResult.status === "failed") {
     spinner.failed(null, deleteChannelResult.message)
     process.exit(0)
@@ -102,11 +109,7 @@ interface Options {
 
   // Discordのカテゴリーを削除する
   spinner.loading("Delete category")
-  const deleteCategoryResult = await deleteCategory(
-    discordBotToken,
-    discordServerId,
-    categories
-  )
+  const deleteCategoryResult = await deleteCategory(discordGuild, categories)
   if (deleteCategoryResult.status === "failed") {
     spinner.failed(null, deleteCategoryResult.message)
     process.exit(0)

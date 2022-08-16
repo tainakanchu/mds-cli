@@ -21,14 +21,14 @@ const spinner = new Spinner()
 
   // チャンネルファイルを作成する
   spinner.loading("Build channel file")
-  const { status, message } = await buildChannelFile(
+  const buildChannelFileResult = await buildChannelFile(
     srcChannelFilePath,
     distChannelFilePath,
     srcMessageDirPath,
     distMessageDirPath
   )
-  if (status === "failed") {
-    spinner.failed(null, message)
+  if (buildChannelFileResult.status === "failed") {
+    spinner.failed(null, buildChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()

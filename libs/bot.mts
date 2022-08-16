@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { Message as SlackMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { WebClient as Client } from "@slack/web-api"
+import { WebClient as SlackClient } from "@slack/web-api"
 import type { Channel } from "./channel.mjs"
 
 export interface Bot {
@@ -11,11 +11,11 @@ export interface Bot {
 
 /**
  * Get bot data
- * @param client
+ * @param slackClient
  * @param botIds
  */
 export const getBotData = async (
-  client: Client,
+  slackClient: SlackClient,
   botIds: string[]
 ): Promise<{
   bots: Bot[]
@@ -25,7 +25,7 @@ export const getBotData = async (
   try {
     const bots = await Promise.all(
       botIds.map(async (botId) => {
-        const result = await client.bots.info({ bot: botId })
+        const result = await slackClient.bots.info({ bot: botId })
         return {
           id: result.bot?.id || "",
           app_id: result.bot?.app_id || "",
