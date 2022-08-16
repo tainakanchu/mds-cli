@@ -64,7 +64,7 @@ export const createChannelFile = async (
 }
 
 /**
- *  * Build channel file
+ * Build channel file
  * @param srcChannelFilePath
  * @param distChannelFilePath
  * @param srcMessageDirPath
