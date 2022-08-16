@@ -3,12 +3,8 @@ import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordGuild } from "../../libs/client.mjs"
-import {
-  createChannel,
-  getChannelFile,
-  createChannelFile,
-} from "../../libs/channel.mjs"
-import { createCategory, createCategoryFile } from "../../libs/category.mjs"
+import { createChannel, getChannelFile } from "../../libs/channel.mjs"
+import { createCategory } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -69,8 +65,8 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルファイルを取得する
-  spinner.loading("Get channel file")
+  // チャンネルを取得する
+  spinner.loading("Get channel")
   const { channels, ...getChannelFileResult } = await getChannelFile(
     distChannelFilePath
   )
@@ -87,13 +83,15 @@ interface Options {
     [
       { id: "", name: "CHANNEL" },
       { id: "", name: "ARCHIVE" },
-    ]
+    ],
+    distCategoryFilePath
   )
   if (createCategoryResult.status === "failed") {
     spinner.failed(null, createCategoryResult.message)
     process.exit(0)
   }
 
+  // デフォルトカテゴリーとアーカイブカテゴリーを取得する
   const defaultCategory = categories.find(
     (category) => category.name === "CHANNEL"
   )
@@ -106,42 +104,18 @@ interface Options {
   }
   spinner.success()
 
-  // カテゴリーファイルを更新する
-  spinner.loading("Update category file")
-  const createCategoryFileResult = await createCategoryFile(
-    distCategoryFilePath,
-    categories
-  )
-  if (createCategoryFileResult.status === "failed") {
-    spinner.failed(null, createCategoryFileResult.message)
-    process.exit(0)
-  }
-  spinner.success()
-
   // チャンネルを作成する
   spinner.loading("Create channel")
   const createChannelResult = await createChannel(
     discordGuild,
     channels,
+    distChannelFilePath,
     defaultCategory,
     archiveCategory,
     migrateArchive
   )
   if (createChannelResult.status === "failed") {
     spinner.failed(null, createChannelResult.message)
-    process.exit(0)
-  }
-  const newChannels = createChannelResult.channels
-  spinner.success()
-
-  // チャンネルファイルを更新する
-  spinner.loading("Update channel file")
-  const createChannelFileResult = await createChannelFile(
-    distChannelFilePath,
-    newChannels
-  )
-  if (createChannelFileResult.status === "failed") {
-    spinner.failed(null, createChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()

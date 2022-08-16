@@ -57,16 +57,19 @@ export const createCategoryFile = async (
  * Create category
  * @param discordGuild
  * @param categories
+ * @param distCategoryFilePath
  */
 export const createCategory = async (
   discordGuild: Guild,
-  categories: Category[]
+  categories: Category[],
+  distCategoryFilePath: string
 ): Promise<{
   categories: Category[]
   status: "success" | "failed"
   message?: any
 }> => {
   try {
+    // カテゴリーを作成する
     const newCategories: Category[] = []
     for (const category of categories) {
       const rusult = await discordGuild.channels.create({
@@ -78,6 +81,20 @@ export const createCategory = async (
         name: category.name,
       })
     }
+
+    // カテゴリーファイルを作成する
+    const createCategoryFileResult = await createCategoryFile(
+      distCategoryFilePath,
+      categories
+    )
+    if (createCategoryFileResult.status === "failed") {
+      return {
+        categories: [],
+        status: "failed",
+        message: createCategoryFileResult.message,
+      }
+    }
+
     return { categories: newCategories, status: "success" }
   } catch (error) {
     return { categories: [], status: "failed", message: error }
@@ -88,26 +105,41 @@ export const createCategory = async (
  * Delete category
  * @param discordGuild
  * @param categories
+ * @param distCategoryFilePath
  */
 export const deleteCategory = async (
   discordGuild: Guild,
-  categories: Category[]
+  categories: Category[],
+  distCategoryFilePath: string
 ): Promise<{
   categories: Category[]
   status: "success" | "failed"
   message?: any
 }> => {
-  const newCategories: Category[] = []
   try {
+    // カテゴリーを削除する
+    const newCategories: Category[] = []
     for (const category of categories) {
       if (category.id) {
-        // カテゴリーを削除する
         await discordGuild.channels.delete(category.id)
-        // カテゴリーのIDを削除する
         category.id = ""
       }
       newCategories.push(category)
     }
+
+    // カテゴリーファイルを更新する
+    const createCategoryFileResult = await createCategoryFile(
+      distCategoryFilePath,
+      newCategories
+    )
+    if (createCategoryFileResult.status === "failed") {
+      return {
+        categories: [],
+        status: "failed",
+        message: createCategoryFileResult.message,
+      }
+    }
+
     return { categories: newCategories, status: "success" }
   } catch (error) {
     return { categories: [], status: "failed", message: error }

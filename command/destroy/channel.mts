@@ -3,16 +3,8 @@ import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordGuild } from "../../libs/client.mjs"
-import {
-  createChannelFile,
-  deleteChannel,
-  getChannelFile,
-} from "../../libs/channel.mjs"
-import {
-  createCategoryFile,
-  deleteCategory,
-  getCategoryFile,
-} from "../../libs/category.mjs"
+import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
+import { deleteCategory, getCategoryFile } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -63,8 +55,8 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルファイルを取得する
-  spinner.loading("Get channel file")
+  // チャンネルを取得する
+  spinner.loading("Get channel")
   const { channels, ...getChannelFileResult } = await getChannelFile(
     distChannelFilePath
   )
@@ -74,8 +66,8 @@ interface Options {
   }
   spinner.success()
 
-  // カテゴリーファイルを取得する
-  spinner.loading("Get category file")
+  // カテゴリーを取得する
+  spinner.loading("Get category")
   const { categories, ...getCategoryFileResult } = await getCategoryFile(
     distCategoryFilePath
   )
@@ -87,44 +79,26 @@ interface Options {
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  const deleteChannelResult = await deleteChannel(discordGuild, channels)
+  const deleteChannelResult = await deleteChannel(
+    discordGuild,
+    channels,
+    distChannelFilePath
+  )
   if (deleteChannelResult.status === "failed") {
     spinner.failed(null, deleteChannelResult.message)
     process.exit(0)
   }
-  const newChannels = deleteChannelResult.channels
   spinner.success()
 
-  // チャンネルファイルを更新する
-  spinner.loading("Update channel file")
-  const createChannelFileResult = await createChannelFile(
-    distChannelFilePath,
-    newChannels
-  )
-  if (createChannelFileResult.status === "failed") {
-    spinner.failed(null, createChannelFileResult.message)
-    process.exit(0)
-  }
-  spinner.success()
-
-  // Discordのカテゴリーを削除する
+  // カテゴリーを削除する
   spinner.loading("Delete category")
-  const deleteCategoryResult = await deleteCategory(discordGuild, categories)
+  const deleteCategoryResult = await deleteCategory(
+    discordGuild,
+    categories,
+    distCategoryFilePath
+  )
   if (deleteCategoryResult.status === "failed") {
     spinner.failed(null, deleteCategoryResult.message)
-    process.exit(0)
-  }
-  const newCategories = deleteCategoryResult.categories
-  spinner.success()
-
-  // カテゴリーファイルを更新する
-  spinner.loading("Update category file")
-  const createCategoryFileResult = await createCategoryFile(
-    distCategoryFilePath,
-    newCategories
-  )
-  if (createCategoryFileResult.status === "failed") {
-    spinner.failed(null, createCategoryFileResult.message)
     process.exit(0)
   }
   spinner.success()

@@ -39,8 +39,8 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルファイルを取得する
-  spinner.loading("Get channel file")
+  // チャンネルを取得する
+  spinner.loading("Get channel")
   const { channels, ...getChannelFileResult } = await getChannelFile(
     distChannelFilePath
   )
@@ -50,8 +50,8 @@ interface Options {
   }
   spinner.success()
 
-  // ユーザーファイルを取得する
-  spinner.loading("Get user file")
+  // ユーザーを取得する
+  spinner.loading("Get user")
   const { users, ...getUserFileResult } = await getUserFile(distUserFilePath)
   if (getUserFileResult.status === "failed") {
     spinner.failed(null, getUserFileResult.message)

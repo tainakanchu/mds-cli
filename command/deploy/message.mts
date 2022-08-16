@@ -54,8 +54,8 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルファイルを取得する
-  spinner.loading("Get channel file")
+  // チャンネルを取得する
+  spinner.loading("Get channel")
   const { channels, ...getChannelFileResult } = await getChannelFile(
     distChannelFilePath
   )
