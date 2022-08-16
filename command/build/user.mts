@@ -5,7 +5,7 @@ import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildUser } from "../../libs/user.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import { getMessageBotId, getBotData } from "../../libs/bot.mjs"
-import { createSlackClient } from "../../libs/util/client.mjs"
+import { createSlackClient } from "../../libs/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const srcDirPath = resolve(__dirname, "../../../.src/")

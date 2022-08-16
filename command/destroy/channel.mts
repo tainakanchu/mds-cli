@@ -2,7 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createDiscordGuild } from "../../libs/util/client.mjs"
+import { createDiscordGuild } from "../../libs/client.mjs"
 import {
   createChannelFile,
   deleteChannel,
