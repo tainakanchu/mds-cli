@@ -1,48 +1,91 @@
-import { access, readFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
-import { Member } from "@slack/web-api/dist/response/UsersListResponse"
+import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
+import { dirname } from "node:path"
+import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
+import type { Bot } from "./bot.mjs"
 
 export interface User {
   slack: {
-    user_id: string
-    user_name: string
+    id: string
+    name: string
     deleted: boolean
     is_bot: boolean
   }
   discord: {
-    user_id: string
-    user_name: string
+    id: string
+    name: string
   }
 }
 
 /**
- * Get user infomation
- * @param filePath
- * @returns User[]
+ * Get user
+ * @param distUserFilePath
  */
-export const getUsers = async (filePath: string) => {
-  await access(filePath, constants.R_OK)
-  const usersFile = await readFile(filePath, "utf8")
-  const users = JSON.parse(usersFile).map((member: Member) => {
-    const userName = member.is_bot
-      ? member.name
-      : member.profile?.display_name
-      ? member.profile.display_name
-      : ""
+export const getUserFile = async (
+  distUserFilePath: string
+): Promise<{
+  users: User[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await access(distUserFilePath, constants.R_OK)
+    const users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
+    return { users: users, status: "success" }
+  } catch (error) {
+    return { users: [], status: "failed", message: error }
+  }
+}
 
-    return {
-      slack: {
-        user_id: member.id,
-        user_name: userName,
-        deleted: member.deleted,
-        is_bot: member.is_bot,
-      },
-      discord: {
-        user_id: "",
-        user_name: userName,
-      },
-    }
-  }) as User[]
-  return users
+/**
+ * Build user
+ * @param srcUserFilePath
+ * @param distUserFilePath
+ * @param bots
+ */
+export const buildUser = async (
+  srcUserFilePath: string,
+  distUserFilePath: string,
+  bots: Bot[]
+): Promise<{ users: User[]; status: "success" | "failed"; message?: any }> => {
+  try {
+    await access(srcUserFilePath, constants.R_OK)
+    const usersFile = await readFile(srcUserFilePath, "utf8")
+    const users = JSON.parse(usersFile)
+      .map((user: SlackUser) => {
+        let id = user.id || ""
+
+        if (user.is_bot) {
+          const appId = user.profile?.api_app_id || ""
+          const botId = bots.find((bot) => bot.app_id === appId)?.id || ""
+          id = botId
+        }
+
+        const name = user.is_bot
+          ? user.real_name || ""
+          : user.profile?.display_name || ""
+
+        return {
+          slack: {
+            id: id,
+            name: name,
+            deleted: user.deleted || false,
+            is_bot: user.is_bot || false,
+          },
+          discord: {
+            id: "",
+            name: name,
+          },
+        } as User
+      })
+      .sort((user: User) => !user.slack.is_bot || !user.slack.deleted)
+
+    await mkdir(dirname(distUserFilePath), {
+      recursive: true,
+    })
+    await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
+
+    return { users: users, status: "success" }
+  } catch (error) {
+    return { users: [], status: "failed", message: error }
+  }
 }

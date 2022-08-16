@@ -3,8 +3,8 @@ import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordGuild } from "../../libs/client.mjs"
-import { createChannel, getChannelFile } from "../../libs/channel.mjs"
-import { createCategory } from "../../libs/category.mjs"
+import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
+import { deleteCategory, getCategoryFile } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -17,13 +17,12 @@ const spinner = new Spinner()
 interface Options {
   discordBotToken?: string
   discordServerId?: string
-  migrateArchive?: boolean
 }
 
 ;(async () => {
   const program = new Command()
   program
-    .description("Deploy channel command")
+    .description("Delete channel command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -34,22 +33,13 @@ interface Options {
       "Discord Server ID",
       process.env.DISCORD_SERVER_ID
     )
-    .requiredOption(
-      "-ma, --migrate-archive [boolean]",
-      "Whether to migrate archive channel",
-      process.env.MIGRATE_ARCHIVE === "true" ? true : false
-    )
     .parse(process.argv)
 
   // パラメーターの取得
   spinner.loading("Check parameter")
   const options: Options = program.opts()
-  const { discordBotToken, discordServerId, migrateArchive } = options
-  if (
-    discordBotToken === undefined ||
-    discordServerId === undefined ||
-    migrateArchive === undefined
-  ) {
+  const { discordBotToken, discordServerId } = options
+  if (discordBotToken === undefined || discordServerId === undefined) {
     spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
@@ -76,46 +66,39 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルのカテゴリーを作成する
-  spinner.loading("Create category")
-  const { categories, ...createCategoryResult } = await createCategory(
-    discordGuild,
-    [
-      { id: "", name: "CHANNEL" },
-      { id: "", name: "ARCHIVE" },
-    ],
+  // カテゴリーを取得する
+  spinner.loading("Get category")
+  const { categories, ...getCategoryFileResult } = await getCategoryFile(
     distCategoryFilePath
   )
-  if (createCategoryResult.status === "failed") {
-    spinner.failed(null, createCategoryResult.message)
-    process.exit(0)
-  }
-
-  // デフォルトカテゴリーとアーカイブカテゴリーを取得する
-  const defaultCategory = categories.find(
-    (category) => category.name === "CHANNEL"
-  )
-  const archiveCategory = categories.find(
-    (category) => category.name === "ARCHIVE"
-  )
-  if (!defaultCategory || !archiveCategory) {
-    spinner.failed(null, "Failed to create category")
+  if (getCategoryFileResult.status === "failed") {
+    spinner.failed(null, getCategoryFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
-  // チャンネルを作成する
-  spinner.loading("Create channel")
-  const createChannelResult = await createChannel(
+  // チャンネルを削除する
+  spinner.loading("Delete channel")
+  const deleteChannelResult = await deleteChannel(
     discordGuild,
     channels,
-    distChannelFilePath,
-    defaultCategory,
-    archiveCategory,
-    migrateArchive
+    distChannelFilePath
   )
-  if (createChannelResult.status === "failed") {
-    spinner.failed(null, createChannelResult.message)
+  if (deleteChannelResult.status === "failed") {
+    spinner.failed(null, deleteChannelResult.message)
+    process.exit(0)
+  }
+  spinner.success()
+
+  // カテゴリーを削除する
+  spinner.loading("Delete category")
+  const deleteCategoryResult = await deleteCategory(
+    discordGuild,
+    categories,
+    distCategoryFilePath
+  )
+  if (deleteCategoryResult.status === "failed") {
+    spinner.failed(null, deleteCategoryResult.message)
     process.exit(0)
   }
   spinner.success()

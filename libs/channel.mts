@@ -1,122 +1,246 @@
-import { access, readFile } from "node:fs/promises"
-// TODO: 後でfsPromise.constantsを使うようにする
-import { constants } from "node:fs"
+import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
+import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
-import { ChannelType, Client, GatewayIntentBits } from "discord.js"
+import { ChannelType } from "discord.js"
+import type { Guild } from "discord.js"
 import type { Category } from "./category.mjs"
+import { getMessageFilePaths } from "./message.mjs"
 
 export interface Channel {
   slack: {
     channel_id: string
     channel_name: string
-    is_archived: boolean
+    archived: boolean
     purpose: string
+    message_file_paths: string[]
   }
   discord: {
     channel_id: string
     channel_name: string
+    archived: boolean
+    deleted: boolean
     topic: string
+    message_file_paths: string[]
   }
 }
 
 /**
- * Get channel information
- * @param filePath
- * @returns Channel[]
+ * Get channel file
+ * @param distChannelFilePath
  */
-export const getChannels = async (filePath: string) => {
-  await access(filePath, constants.R_OK)
-  const channelsFile = await readFile(filePath, "utf8")
-  const channels = JSON.parse(channelsFile).map((channel: SlackChannel) => ({
-    slack: {
-      channel_id: channel.id,
-      channel_name: channel.name,
-      is_archived: channel.is_archived,
-      purpose: channel.purpose?.value ? channel.purpose.value : "",
-    },
-    discord: {
-      channel_id: "",
-      channel_name: channel.name,
-      topic: channel.purpose?.value ? channel.purpose.value : "",
-    },
-  })) as Channel[]
-  return channels
+export const getChannelFile = async (
+  distChannelFilePath: string
+): Promise<{
+  channels: Channel[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await access(distChannelFilePath, constants.R_OK)
+    const channels = JSON.parse(
+      await readFile(distChannelFilePath, "utf8")
+    ) as Channel[]
+    return { channels: channels, status: "success" }
+  } catch (error) {
+    return { channels: [], status: "failed", message: error }
+  }
+}
+
+/**
+ * Create channel file
+ * @param distChannelFilePath
+ * @param channels
+ */
+export const createChannelFile = async (
+  distChannelFilePath: string,
+  channels: Channel[]
+): Promise<{
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await mkdir(dirname(distChannelFilePath), {
+      recursive: true,
+    })
+    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
+    return { status: "success" }
+  } catch (error) {
+    return { status: "failed", message: error }
+  }
+}
+
+/**
+ * Build channel file
+ * @param srcChannelFilePath
+ * @param distChannelFilePath
+ * @param srcMessageDirPath
+ * @param distMessageDirPath
+ */
+export const buildChannelFile = async (
+  srcChannelFilePath: string,
+  distChannelFilePath: string,
+  srcMessageDirPath: string,
+  distMessageDirPath: string
+): Promise<{
+  channels: Channel[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  const newChannels: Channel[] = []
+  try {
+    await access(srcChannelFilePath, constants.R_OK)
+    const slackChannels = JSON.parse(
+      await readFile(srcChannelFilePath, "utf8")
+    ) as SlackChannel[]
+
+    for (const channel of slackChannels) {
+      if (channel.name) {
+        // Slackのメッセージファイルのパスを取得する
+        const srcMessageFilePaths = await getMessageFilePaths(
+          join(srcMessageDirPath, channel.name)
+        )
+
+        // Discordのメッセージファイルのパスを算出する
+        const distMessageFilePaths = srcMessageFilePaths.map(
+          (messageFilePath) =>
+            messageFilePath.replace(srcMessageDirPath, distMessageDirPath)
+        )
+
+        newChannels.push({
+          slack: {
+            channel_id: channel.id || "",
+            channel_name: channel.name || "",
+            archived: channel.is_archived || false,
+            purpose: channel.purpose?.value ? channel.purpose.value : "",
+            message_file_paths: srcMessageFilePaths,
+          },
+          discord: {
+            channel_id: "",
+            channel_name: channel.name || "",
+            archived: channel.is_archived || false,
+            deleted: false,
+            topic: channel.purpose?.value ? channel.purpose.value : "",
+            message_file_paths: distMessageFilePaths,
+          },
+        })
+      }
+    }
+
+    const createChannelFileResult = await createChannelFile(
+      distChannelFilePath,
+      newChannels
+    )
+    if (createChannelFileResult.status === "failed") {
+      return {
+        channels: newChannels,
+        status: "failed",
+        message: createChannelFileResult.message,
+      }
+    }
+    return { channels: newChannels, status: "success" }
+  } catch (error) {
+    return { channels: [], status: "failed", message: error }
+  }
 }
 
 /**
  * Create channel
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param channels
+ * @param distChannelFilePath
  * @param defaultCategory
  * @param archiveCategory
- * @param isMigrateArchive
- * @returns Channel[]
+ * @param migrateArchive
  */
-export const createChannels = async (
-  discordBotToken: string,
-  discordServerId: string,
+export const createChannel = async (
+  discordGuild: Guild,
   channels: Channel[],
+  distChannelFilePath: string,
   defaultCategory: Category,
   archiveCategory: Category,
-  isMigrateArchive: boolean
-) => {
-  const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-  })
-  await client.login(discordBotToken)
-
-  const newChannels: Channel[] = []
-  for (const channel of channels) {
-    if (!channel.slack.is_archived || isMigrateArchive) {
-      // チャンネルを作成する
-      const result = await client.guilds.cache
-        .get(discordServerId)
-        ?.channels.create({
+  migrateArchive: boolean
+): Promise<{
+  channels: Channel[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    // チャンネルを作成する
+    const newChannels: Channel[] = []
+    for (const channel of channels) {
+      if (!channel.discord.archived || migrateArchive) {
+        const result = await discordGuild.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           topic: channel.discord.topic ? channel.discord.topic : undefined,
-          parent: channel.slack.is_archived
+          parent: channel.discord.archived
             ? archiveCategory.id
             : defaultCategory.id,
         })
-      // チャンネルのIDを更新する
-      if (result?.id) {
+        // チャンネルのIDを更新する
         channel.discord.channel_id = result.id
+        newChannels.push(channel)
       }
-      newChannels.push(channel)
     }
-  }
 
-  return newChannels
+    // チャンネルファイルを作成する
+    const createChannelFileResult = await createChannelFile(
+      distChannelFilePath,
+      newChannels
+    )
+    if (createChannelFileResult.status === "failed") {
+      return {
+        channels: [],
+        status: "failed",
+        message: createChannelFileResult.message,
+      }
+    }
+
+    return { channels: newChannels, status: "success" }
+  } catch (error) {
+    return { channels: [], status: "failed", message: error }
+  }
 }
 
 /**
  * Delete channel
- * @param discordBotToken
- * @param discordServerId
+ * @param discordGuild
  * @param channels
- * @returns Channel[]
+ * @param distChannelFilePath
  */
-export const deleteChannels = async (
-  discordBotToken: string,
-  discordServerId: string,
+export const deleteChannel = async (
+  discordGuild: Guild,
+  channels: Channel[],
+  distChannelFilePath: string
+): Promise<{
   channels: Channel[]
-) => {
-  const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-  })
-  await client.login(discordBotToken)
-
-  const newChannels: Channel[] = []
-  for (const channel of channels) {
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
     // チャンネルを削除する
-    await client.guilds.cache
-      .get(discordServerId)
-      ?.channels.delete(channel.discord.channel_id)
-    // チャンネルのIDを削除する
-    channel.discord.channel_id = ""
-    newChannels.push(channel)
+    const newChannels: Channel[] = []
+    for (const channel of channels) {
+      await discordGuild.channels.delete(channel.discord.channel_id)
+      channel.discord.deleted = true
+      newChannels.push(channel)
+    }
+
+    // チャンネルファイルを更新する
+    const createChannelFileResult = await createChannelFile(
+      distChannelFilePath,
+      newChannels
+    )
+    if (createChannelFileResult.status === "failed") {
+      return {
+        channels: [],
+        status: "failed",
+        message: createChannelFileResult.message,
+      }
+    }
+
+    return { channels: newChannels, status: "success" }
+  } catch (error) {
+    return { channels: [], status: "failed", message: error }
   }
-  return newChannels
 }

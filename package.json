@@ -7,11 +7,17 @@
   "type": "module",
   "scripts": {
     "init": "node --loader ts-node/esm ./command/init.mts",
-    "convert:user": "node --loader ts-node/esm ./command/convert/user.mts",
-    "convert:channel": "node --loader ts-node/esm ./command/convert/channel.mts",
-    "convert:message": "node --loader ts-node/esm ./command/convert/message.mts",
+    "build": "run-s init \"build:*\"",
+    "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
+    "build:user": "node --loader ts-node/esm ./command/build/user.mts",
+    "build:message": "node --loader ts-node/esm ./command/build/message.mts",
+    "deploy": "run-p \"deploy:*\"",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
-    "delete:channel": "node --loader ts-node/esm ./command/delete/channel.mts"
+    "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
+    "destroy": "run-p \"deploy:*\"",
+    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
+    "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
+    "start": "run-s build deploy"
   },
   "volta": {
     "node": "18.7.0",
@@ -27,9 +33,9 @@
     "picocolors": "^1.0.0"
   },
   "devDependencies": {
-    "@types/node": "^18.7.3",
-    "esbuild": "^0.15.2",
+    "@types/node": "^18.7.5",
     "npm-check-updates": "^16.0.5",
+    "npm-run-all": "^4.1.5",
     "ts-node": "^10.9.1",
     "typescript": "^4.7.4"
   }
