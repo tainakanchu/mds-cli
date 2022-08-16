@@ -85,7 +85,7 @@ export const createCategory = async (
     // カテゴリーファイルを作成する
     const createCategoryFileResult = await createCategoryFile(
       distCategoryFilePath,
-      categories
+      newCategories
     )
     if (createCategoryFileResult.status === "failed") {
       return {
