@@ -1,12 +1,17 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { readFile, access, mkdir, writeFile, constants } from "node:fs/promises"
-import { resolve, join, dirname } from "node:path"
+import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
-import type { Channel } from "../../libs/channel.mjs"
-import { deleteCategory } from "../../libs/category.mjs"
-import type { Category } from "../../libs/category.mjs"
+import {
+  createChannelFile,
+  deleteChannel,
+  getChannelFile,
+} from "../../libs/channel.mjs"
+import {
+  createCategoryFile,
+  deleteCategory,
+  getCategoryFile,
+} from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -49,75 +54,74 @@ interface Options {
 
   // チャンネルファイルを取得する
   spinner.loading("Get channel file")
-  let channels: Channel[] = []
-  try {
-    channels = await getChannelFile(distChannelFilePath)
-  } catch (error) {
-    spinner.failed(null, error)
+  const { channels, ...getChannelFileResult } = await getChannelFile(
+    distChannelFilePath
+  )
+  if (getChannelFileResult.status === "failed") {
+    spinner.failed(null, getChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // カテゴリーファイルを取得する
   spinner.loading("Get category file")
-  let categories: Category[] = []
-  try {
-    await access(distCategoryFilePath, constants.R_OK)
-    categories = JSON.parse(
-      await readFile(distCategoryFilePath, "utf8")
-    ) as Category[]
-  } catch (error) {
-    spinner.failed(null, error)
+  const { categories, ...getCategoryFileResult } = await getCategoryFile(
+    distCategoryFilePath
+  )
+  if (getCategoryFileResult.status === "failed") {
+    spinner.failed(null, getCategoryFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  try {
-    channels = await deleteChannel(discordBotToken, discordServerId, channels)
-  } catch (error) {
-    spinner.failed(null, error)
+  const deleteChannelResult = await deleteChannel(
+    discordBotToken,
+    discordServerId,
+    channels
+  )
+  if (deleteChannelResult.status === "failed") {
+    spinner.failed(null, deleteChannelResult.message)
     process.exit(0)
   }
+  const newChannels = deleteChannelResult.channels
   spinner.success()
 
   // チャンネルファイルを更新する
   spinner.loading("Update channel file")
-  try {
-    await mkdir(dirname(distChannelFilePath), {
-      recursive: true,
-    })
-    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
-  } catch (error) {
-    spinner.failed(null, error)
+  const createChannelFileResult = await createChannelFile(
+    distChannelFilePath,
+    newChannels
+  )
+  if (createChannelFileResult.status === "failed") {
+    spinner.failed(null, createChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // Discordのカテゴリーを削除する
   spinner.loading("Delete category")
-  try {
-    categories = await deleteCategory(
-      discordBotToken,
-      discordServerId,
-      categories
-    )
-  } catch (error) {
-    spinner.failed(null, error)
+  const deleteCategoryResult = await deleteCategory(
+    discordBotToken,
+    discordServerId,
+    categories
+  )
+  if (deleteCategoryResult.status === "failed") {
+    spinner.failed(null, deleteCategoryResult.message)
     process.exit(0)
   }
+  const newCategories = deleteCategoryResult.categories
   spinner.success()
 
-  // カテゴリー情報のファイルを更新する
-  spinner.loading("Update category data")
-  try {
-    await mkdir(dirname(distCategoryFilePath), {
-      recursive: true,
-    })
-    await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
-  } catch (error) {
-    spinner.failed(null, error)
+  // カテゴリーファイルを更新する
+  spinner.loading("Update category file")
+  const createCategoryFileResult = await createCategoryFile(
+    distCategoryFilePath,
+    newCategories
+  )
+  if (createCategoryFileResult.status === "failed") {
+    spinner.failed(null, createCategoryFileResult.message)
     process.exit(0)
   }
   spinner.success()

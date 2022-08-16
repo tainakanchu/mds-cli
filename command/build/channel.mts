@@ -3,7 +3,6 @@ import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildChannelFile } from "../../libs/channel.mjs"
-import type { Channel } from "../../libs/channel.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const srcDirPath = resolve(__dirname, "../../../.src/")
@@ -22,16 +21,14 @@ const spinner = new Spinner()
 
   // チャンネルファイルを作成する
   spinner.loading("Build channel file")
-  let channels: Channel[] = []
-  try {
-    channels = await buildChannelFile(
-      srcChannelFilePath,
-      distChannelFilePath,
-      srcMessageDirPath,
-      distMessageDirPath
-    )
-  } catch (error) {
-    spinner.failed(null, error)
+  const { status, message } = await buildChannelFile(
+    srcChannelFilePath,
+    distChannelFilePath,
+    srcMessageDirPath,
+    distMessageDirPath
+  )
+  if (status === "failed") {
+    spinner.failed(null, message)
     process.exit(0)
   }
   spinner.success()

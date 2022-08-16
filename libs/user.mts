@@ -19,57 +19,73 @@ export interface User {
 /**
  * Get user
  * @param distUserFilePath
- * @returns User[]
  */
-export const getUserFile = async (distUserFilePath: string) => {
-  await access(distUserFilePath, constants.R_OK)
-  return JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
+export const getUserFile = async (
+  distUserFilePath: string
+): Promise<{
+  users: User[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await access(distUserFilePath, constants.R_OK)
+    const users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
+    return { users: users, status: "success" }
+  } catch (error) {
+    return { users: [], status: "failed", message: error }
+  }
 }
 
 /**
  * Build user
  * @param srcUserFilePath
- * @returns User[]
+ * @param distUserFilePath
+ * @param bots
  */
 export const buildUser = async (
   srcUserFilePath: string,
   distUserFilePath: string,
   bots: Bot[]
-) => {
-  await access(srcUserFilePath, constants.R_OK)
-  const usersFile = await readFile(srcUserFilePath, "utf8")
-  const users = JSON.parse(usersFile)
-    .map((user: SlackUser) => {
-      let id = user.id || ""
+): Promise<{ users: User[]; status: "success" | "failed"; message?: any }> => {
+  try {
+    await access(srcUserFilePath, constants.R_OK)
+    const usersFile = await readFile(srcUserFilePath, "utf8")
+    const users = JSON.parse(usersFile)
+      .map((user: SlackUser) => {
+        let id = user.id || ""
 
-      if (user.is_bot) {
-        const appId = user.profile?.api_app_id || ""
-        const botId = bots.find((bot) => bot.app_id === appId)?.id || ""
-        id = botId
-      }
+        if (user.is_bot) {
+          const appId = user.profile?.api_app_id || ""
+          const botId = bots.find((bot) => bot.app_id === appId)?.id || ""
+          id = botId
+        }
 
-      const name = user.is_bot
-        ? user.real_name || ""
-        : user.profile?.display_name || ""
+        const name = user.is_bot
+          ? user.real_name || ""
+          : user.profile?.display_name || ""
 
-      return {
-        slack: {
-          id: id,
-          name: name,
-          deleted: user.deleted || false,
-          is_bot: user.is_bot || false,
-        },
-        discord: {
-          id: "",
-          name: name,
-        },
-      } as User
+        return {
+          slack: {
+            id: id,
+            name: name,
+            deleted: user.deleted || false,
+            is_bot: user.is_bot || false,
+          },
+          discord: {
+            id: "",
+            name: name,
+          },
+        } as User
+      })
+      .sort((user: User) => !user.slack.is_bot || !user.slack.deleted)
+
+    await mkdir(dirname(distUserFilePath), {
+      recursive: true,
     })
-    .sort((user: User) => !user.slack.is_bot || !user.slack.deleted)
+    await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
 
-  await mkdir(dirname(distUserFilePath), {
-    recursive: true,
-  })
-  await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
-  return users
+    return { users: users, status: "success" }
+  } catch (error) {
+    return { users: [], status: "failed", message: error }
+  }
 }

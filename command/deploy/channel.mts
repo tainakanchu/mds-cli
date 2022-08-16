@@ -1,16 +1,13 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { mkdir, writeFile } from "node:fs/promises"
-import { resolve, join, dirname } from "node:path"
+import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import {
   createChannel,
   getChannelFile,
   createChannelFile,
 } from "../../libs/channel.mjs"
-import type { Channel } from "../../libs/channel.mjs"
 import { createCategory, createCategoryFile } from "../../libs/category.mjs"
-import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -63,69 +60,79 @@ interface Options {
 
   // チャンネルファイルを取得する
   spinner.loading("Get channel file")
-  let channels: Channel[] = []
-  try {
-    channels = await getChannelFile(distChannelFilePath)
-  } catch (error) {
-    spinner.failed(null, error)
+  const { channels, ...getChannelFileResult } = await getChannelFile(
+    distChannelFilePath
+  )
+  if (getChannelFileResult.status === "failed") {
+    spinner.failed(null, getChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルのカテゴリーを作成する
-  spinner.loading("Build category")
-  let categories: Category[] = []
-  let defaultCategory: Category | undefined = undefined
-  let archiveCategory: Category | undefined = undefined
-  try {
-    categories = await createCategory(discordBotToken, discordServerId, [
+  spinner.loading("Create category")
+  const { categories, ...createCategoryResult } = await createCategory(
+    discordBotToken,
+    discordServerId,
+    [
       { id: "", name: "CHANNEL" },
       { id: "", name: "ARCHIVE" },
-    ])
-    defaultCategory = categories.find((category) => category.name === "CHANNEL")
-    archiveCategory = categories.find((category) => category.name === "ARCHIVE")
-    if (!defaultCategory || !archiveCategory) {
-      throw new Error("Category is not found")
-    }
-  } catch (error) {
-    spinner.failed(null, error)
+    ]
+  )
+  if (createCategoryResult.status === "failed") {
+    spinner.failed(null, createCategoryResult.message)
+    process.exit(0)
+  }
+
+  const defaultCategory = categories.find(
+    (category) => category.name === "CHANNEL"
+  )
+  const archiveCategory = categories.find(
+    (category) => category.name === "ARCHIVE"
+  )
+  if (!defaultCategory || !archiveCategory) {
+    spinner.failed(null, "Failed to create category")
     process.exit(0)
   }
   spinner.success()
 
   // カテゴリーファイルを作成する
   spinner.loading("Create category file")
-  try {
-    await createCategoryFile(distCategoryFilePath, categories)
-  } catch (error) {
-    spinner.failed(null, error)
+  const createCategoryFileResult = await createCategoryFile(
+    distCategoryFilePath,
+    categories
+  )
+  if (createCategoryFileResult.status === "failed") {
+    spinner.failed(null, createCategoryFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを作成する
   spinner.loading("Create channel")
-  try {
-    channels = await createChannel(
-      discordBotToken,
-      discordServerId,
-      channels,
-      defaultCategory,
-      archiveCategory,
-      migrateArchive
-    )
-  } catch (error) {
-    spinner.failed(null, error)
+  const createChannelResult = await createChannel(
+    discordBotToken,
+    discordServerId,
+    channels,
+    defaultCategory,
+    archiveCategory,
+    migrateArchive
+  )
+  const newChannels = createChannelResult.channels
+  if (createChannelResult.status === "failed") {
+    spinner.failed(null, createChannelResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルファイルを更新する
   spinner.loading("Update channel file")
-  try {
-    await createChannelFile(distChannelFilePath, channels)
-  } catch (error) {
-    spinner.failed(null, error)
+  const createChannelFileResult = await createChannelFile(
+    distChannelFilePath,
+    newChannels
+  )
+  if (createChannelFileResult.status === "failed") {
+    spinner.failed(null, createChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()

@@ -4,9 +4,7 @@ import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildUser } from "../../libs/user.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
-import type { Channel } from "../../libs/channel.mjs"
 import { getMessageBotId, getBotData } from "../../libs/bot.mjs"
-import type { Bot } from "../../libs/bot.mjs"
 import { WebClient } from "@slack/web-api"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -46,27 +44,20 @@ interface Options {
 
   // チャンネルファイルを取得する
   spinner.loading("Get channel file")
-  let channels: Channel[] = []
-  try {
-    channels = await getChannelFile(distChannelFilePath)
-  } catch (error) {
-    spinner.failed(null, error)
+  const { channels, ...getChannelFileResult } = await getChannelFile(
+    distChannelFilePath
+  )
+  if (getChannelFileResult.status === "failed") {
+    spinner.failed(null, getChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()
 
   // メッセージファイル内のBotIdを取得する
   spinner.loading("Get BotId in message file")
-  let botIds: string[] = []
-  try {
-    for (const channel of channels) {
-      for (const messageFilePath of channel.slack.message_file_paths) {
-        botIds = [...botIds, ...(await getMessageBotId(messageFilePath))]
-      }
-    }
-    botIds = [...new Set(botIds)]
-  } catch (error) {
-    spinner.failed(null, error)
+  const { botIds, ...getMessageBotIdResult } = await getMessageBotId(channels)
+  if (getMessageBotIdResult.status === "failed") {
+    spinner.failed(null, getMessageBotIdResult.message)
     process.exit(0)
   }
   spinner.success
@@ -74,11 +65,9 @@ interface Options {
   // Botのデータを取得する
   spinner.loading("Get bot data")
   const client = new WebClient(slackBotToken)
-  let bots: Bot[] = []
-  try {
-    bots = await getBotData(client, botIds)
-  } catch (error) {
-    spinner.failed(null, error)
+  const { bots, ...getBotDataResult } = await getBotData(client, botIds)
+  if (getBotDataResult.status === "failed") {
+    spinner.failed(null, getBotDataResult.message)
     process.exit(0)
   }
   spinner.success

@@ -5,7 +5,7 @@ import { resolve, join } from "node:path"
 import { Client, GatewayIntentBits } from "discord.js"
 import type { Guild } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import type { Channel } from "../../libs/channel.mjs"
+import { getChannelFile } from "../../libs/channel.mjs"
 import { createMessage } from "../../libs/message.mjs"
 import type { Message } from "../../libs/message.mjs"
 
@@ -66,16 +66,13 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネル情報を取得する
-  spinner.loading("Get channel data")
-  let channels: Channel[] = []
-  try {
-    await access(distChannelFilePath, constants.R_OK)
-    channels = JSON.parse(
-      await readFile(distChannelFilePath, "utf8")
-    ) as Channel[]
-  } catch (error) {
-    spinner.failed(null, error)
+  // チャンネルファイルを取得する
+  spinner.loading("Get channel file")
+  const { channels, ...getChannelFileResult } = await getChannelFile(
+    distChannelFilePath
+  )
+  if (getChannelFileResult.status === "failed") {
+    spinner.failed(null, getChannelFileResult.message)
     process.exit(0)
   }
   spinner.success()
