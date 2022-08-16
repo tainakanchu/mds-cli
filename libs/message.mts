@@ -228,7 +228,7 @@ export const createMessage = async (
   message?: any
 }> => {
   try {
-    // チャンネルを作成
+    // メッセージを作成
     const channelGuild = discordGuild.channels.cache.get(channelId)
     const newMessages: Message[] = []
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
@@ -251,7 +251,7 @@ export const createMessage = async (
       }
     }
 
-    // チャンネルファイルを更新
+    // メッセージファイルを更新
     const createMessageFileResult = await createMessageFile(
       distMessageFilePath,
       newMessages
@@ -297,6 +297,110 @@ export const createAllMessage = async (
             )
             if (createMessageResult.status === "failed") {
               throw new Error(createMessageResult.message)
+            }
+          })
+        )
+      })
+    )
+    return { status: "success" }
+  } catch (error) {
+    return { status: "failed", message: error }
+  }
+}
+
+/**
+ *  Delete message
+ * @param discordGuild
+ * @param channelId
+ * @param distMessageFilePath
+ * @param messages
+ */
+export const deleteMessage = async (
+  discordGuild: Guild,
+  messages: Message[],
+  channelId: string,
+  distMessageFilePath: string
+): Promise<{
+  messages: Message[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    // メッセージを削除
+    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const newMessages: Message[] = []
+    if (channelGuild && channelGuild.type === ChannelType.GuildText) {
+      for (const message of messages) {
+        if (message.message_id) {
+          const result = await channelGuild.messages.cache
+            .get(message.message_id)
+            ?.delete()
+          newMessages.push({
+            ...message,
+            ...{
+              message_id: result?.id,
+              channel_id: result?.channelId,
+              guild_id: result?.guildId ? result?.guildId : undefined,
+              timestamp: result?.editedTimestamp
+                ? result?.editedTimestamp
+                : undefined,
+              anthor: {
+                id: result?.author.id,
+                is_bot: result?.author.bot,
+                name: result?.author.username,
+              },
+            },
+          })
+        }
+      }
+    }
+
+    // メッセージファイルを更新
+    const createMessageFileResult = await createMessageFile(
+      distMessageFilePath,
+      newMessages
+    )
+    if (createMessageFileResult.status === "failed") {
+      return {
+        messages: [],
+        status: "failed",
+        message: createMessageFileResult.message,
+      }
+    }
+
+    return { messages: newMessages, status: "success" }
+  } catch (error) {
+    return { messages: [], status: "failed", message: error }
+  }
+}
+
+/**
+ * Delete all message
+ */
+export const deleteAllMessage = async (
+  discordGuild: Guild,
+  channels: Channel[]
+): Promise<{
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await Promise.all(
+      channels.map(async (channel) => {
+        await Promise.all(
+          channel.discord.message_file_paths.map(async (messageFilePath) => {
+            const getMessageFileResult = await getMessageFile(messageFilePath)
+            if (getMessageFileResult.status === "failed") {
+              throw new Error(getMessageFileResult.message)
+            }
+            const deleteMessageResult = await deleteMessage(
+              discordGuild,
+              getMessageFileResult.messages,
+              channel.discord.channel_id,
+              messageFilePath
+            )
+            if (deleteMessageResult.status === "failed") {
+              throw new Error(deleteMessageResult.message)
             }
           })
         )
