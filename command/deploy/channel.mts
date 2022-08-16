@@ -106,8 +106,8 @@ interface Options {
   }
   spinner.success()
 
-  // カテゴリーファイルを作成する
-  spinner.loading("Create category file")
+  // カテゴリーファイルを更新する
+  spinner.loading("Update category file")
   const createCategoryFileResult = await createCategoryFile(
     distCategoryFilePath,
     categories

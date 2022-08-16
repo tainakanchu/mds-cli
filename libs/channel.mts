@@ -52,7 +52,10 @@ export const getChannelFile = async (
 export const createChannelFile = async (
   distChannelFilePath: string,
   channels: Channel[]
-) => {
+): Promise<{
+  status: "success" | "failed"
+  message?: any
+}> => {
   try {
     await mkdir(dirname(distChannelFilePath), {
       recursive: true,
@@ -81,8 +84,7 @@ export const buildChannelFile = async (
   status: "success" | "failed"
   message?: any
 }> => {
-  const channels: Channel[] = []
-
+  const newChannels: Channel[] = []
   try {
     await access(srcChannelFilePath, constants.R_OK)
     const slackChannels = JSON.parse(
@@ -102,7 +104,7 @@ export const buildChannelFile = async (
             messageFilePath.replace(srcMessageDirPath, distMessageDirPath)
         )
 
-        channels.push({
+        newChannels.push({
           slack: {
             channel_id: channel.id || "",
             channel_name: channel.name || "",
@@ -120,15 +122,21 @@ export const buildChannelFile = async (
       }
     }
 
-    await mkdir(dirname(distChannelFilePath), {
-      recursive: true,
-    })
-    await writeFile(distChannelFilePath, JSON.stringify(channels, null, 2))
-  } catch (error: any) {
-    return { channels: channels, status: "failed", message: error }
+    const createChannelFileResult = await createChannelFile(
+      distChannelFilePath,
+      newChannels
+    )
+    if (createChannelFileResult.status === "failed") {
+      return {
+        channels: newChannels,
+        status: "failed",
+        message: createChannelFileResult.message,
+      }
+    }
+    return { channels: newChannels, status: "success" }
+  } catch (error) {
+    return { channels: [], status: "failed", message: error }
   }
-
-  return { channels: channels, status: "success" }
 }
 
 /**

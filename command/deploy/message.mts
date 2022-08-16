@@ -1,12 +1,10 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { readFile, access, constants } from "node:fs/promises"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordGuild } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
-import { createMessage } from "../../libs/message.mjs"
-import type { Message } from "../../libs/message.mjs"
+import { createAllMessage } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -69,22 +67,9 @@ interface Options {
 
   // メッセージを作成する
   spinner.loading("Create message")
-  try {
-    for (const channel of channels) {
-      for (const messageFilePath of channel.discord.message_file_paths) {
-        await access(messageFilePath, constants.R_OK)
-        const messages = JSON.parse(
-          await readFile(messageFilePath, "utf8")
-        ) as Message[]
-        const newMessages = await createMessage(
-          discordGuild,
-          channel.discord.channel_id,
-          messages
-        )
-      }
-    }
-  } catch (error) {
-    spinner.failed(null, error)
+  const createAllMessageResult = await createAllMessage(discordGuild, channels)
+  if (createAllMessageResult.status === "failed") {
+    spinner.failed(null, createAllMessageResult.message)
     process.exit(0)
   }
   spinner.success()

@@ -8,9 +8,60 @@ import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
 
 export interface Message {
-  message_id: string
+  message_id?: string
+  channel_id?: string
+  guild_id?: string
   text: string
-  timestamp: string
+  timestamp?: number
+  author?: {
+    id: string
+    is_bot: boolean
+  }
+}
+
+/**
+ * Get message file
+ * @param distMessageFilePath
+ */
+export const getMessageFile = async (
+  distMessageFilePath: string
+): Promise<{
+  messages: Message[]
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await access(distMessageFilePath, constants.R_OK)
+    const messages = JSON.parse(
+      await readFile(distMessageFilePath, "utf8")
+    ) as Message[]
+    return { messages: messages, status: "success" }
+  } catch (error) {
+    return { messages: [], status: "failed", message: error }
+  }
+}
+
+/**
+ * Create message file
+ * @param distMessageFilePath
+ * @param messages
+ */
+export const createMessageFile = async (
+  distMessageFilePath: string,
+  messages: Message[]
+): Promise<{
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await mkdir(dirname(distMessageFilePath), {
+      recursive: true,
+    })
+    await writeFile(distMessageFilePath, JSON.stringify(messages, null, 2))
+    return { status: "success" }
+  } catch (error) {
+    return { status: "failed", message: error }
+  }
 }
 
 /**
@@ -75,16 +126,21 @@ export const buildMessageFile = async (
       }
 
       newMessages.push({
-        message_id: "",
         text: text,
-        timestamp: "",
       })
     }
 
-    await mkdir(dirname(distMessageFilePath), {
-      recursive: true,
-    })
-    await writeFile(distMessageFilePath, JSON.stringify(newMessages, null, 2))
+    const createMessageFileResult = await createMessageFile(
+      distMessageFilePath,
+      newMessages
+    )
+    if (createMessageFileResult.status === "failed") {
+      return {
+        messages: [],
+        status: "failed",
+        message: createMessageFileResult.message,
+      }
+    }
 
     return { messages: newMessages, status: "success" }
   } catch (error) {
@@ -156,23 +212,98 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 
 /**
  *  Create message
- * @param guild
+ * @param discordGuild
  * @param channelId
+ * @param distMessageFilePath
  * @param messages
  */
 export const createMessage = async (
-  guild: Guild,
+  discordGuild: Guild,
+  messages: Message[],
   channelId: string,
+  distMessageFilePath: string
+): Promise<{
   messages: Message[]
-) => {
-  const channelGuild = guild?.channels.cache.get(channelId)
-  const newMessages: Message[] = []
-  if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-    for (const message of messages) {
-      const result = await channelGuild.send(message.text)
-      message.message_id = result.id
-      newMessages.push(message)
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    // チャンネルを作成
+    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const newMessages: Message[] = []
+    if (channelGuild && channelGuild.type === ChannelType.GuildText) {
+      for (const message of messages) {
+        const result = await channelGuild.send(message.text)
+        newMessages.push({
+          ...message,
+          ...{
+            message_id: result.id,
+            channel_id: result.channelId,
+            guild_id: result.guildId ? result.guildId : undefined,
+            timestamp: result.createdTimestamp,
+            anthor: {
+              id: result.author.id,
+              is_bot: result.author.bot,
+              name: result.author.username,
+            },
+          },
+        })
+      }
     }
+
+    // チャンネルファイルを更新
+    const createMessageFileResult = await createMessageFile(
+      distMessageFilePath,
+      newMessages
+    )
+    if (createMessageFileResult.status === "failed") {
+      return {
+        messages: [],
+        status: "failed",
+        message: createMessageFileResult.message,
+      }
+    }
+
+    return { messages: newMessages, status: "success" }
+  } catch (error) {
+    return { messages: [], status: "failed", message: error }
   }
-  return newMessages
+}
+
+/**
+ * Create all message
+ */
+export const createAllMessage = async (
+  discordGuild: Guild,
+  channels: Channel[]
+): Promise<{
+  status: "success" | "failed"
+  message?: any
+}> => {
+  try {
+    await Promise.all(
+      channels.map(async (channel) => {
+        await Promise.all(
+          channel.discord.message_file_paths.map(async (messageFilePath) => {
+            const getMessageFileResult = await getMessageFile(messageFilePath)
+            if (getMessageFileResult.status === "failed") {
+              throw new Error(getMessageFileResult.message)
+            }
+            const createMessageResult = await createMessage(
+              discordGuild,
+              getMessageFileResult.messages,
+              channel.discord.channel_id,
+              messageFilePath
+            )
+            if (createMessageResult.status === "failed") {
+              throw new Error(createMessageResult.message)
+            }
+          })
+        )
+      })
+    )
+    return { status: "success" }
+  } catch (error) {
+    return { status: "failed", message: error }
+  }
 }
