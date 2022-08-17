@@ -19,7 +19,8 @@ export interface Message {
   message_id?: string
   channel_id?: string
   guild_id?: string
-  text: string
+  content: string
+  is_show_cut_line: boolean
   files?: {
     id: string
     file_type: string
@@ -28,11 +29,21 @@ export interface Message {
     url: string
     download_url: string
   }[]
-  author?: {
+  anthor?: {
     id: string
-    is_bot: boolean
+    name: string
+    type: "bot"
   }
-  timestamp?: number
+  timestamp?: number | 1431442800
+  slack?: {
+    anthor: {
+      id: string
+      name: string
+      type: "bot" | "active-user" | "cancel-user"
+      icon: "🤖" | "🥶" | "😃"
+    }
+    post_datetime: string
+  }
 }
 
 /**
@@ -106,43 +117,24 @@ export const buildMessageFile = async (
     const messages = JSON.parse(messageFile) as SlackMessage[]
     let isMaxFileSizeOver = false
     for (const message of messages) {
-      let text = ""
-
-      // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
-      if (showCutLine)
-        text += "------------------------------------------------\n"
-
-      // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
-      const user = users.find(
+      // メッセージの送信者情報を取得
+      const anthor = users.find(
         (user) =>
           user.slack.id === message.user || user.slack.id === message.bot_id
       )
 
-      const name = user ? user.discord.name : "NoName"
-      const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
-      const timestamp = message.ts
-        ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
-        : ""
-      text += `${icon}  **${name}**  ${timestamp}\n`
-
-      // TODO: ここにサブタイプに応じて必要なら処理を書く
-      // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
-
-      // テキストにメッセージ内容を追加
-      text += message.text
-
-      // テキスト内のメンションをユーザー名もしくはBot名に置換
-      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
+      // テキスト内のメンションを、メッセージ送信時にメンションされないユーザー名もしくはBot名に置換
+      let content = message.text || ""
+      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(content)) {
         for (const user of users) {
-          // Discordで送信時にメンションされないように加工
-          text = text.replaceAll(
+          content = content.replaceAll(
             new RegExp(`<@${user.slack.id}>`, "g"),
             `@${user.discord.name}`
           )
         }
       }
 
-      // 添付ファイルがあれば追加
+      // 添付ファイルを取得
       const files: Message["files"] = message.files?.map((file) => {
         if (file.size && file.size > maxFileSize && !isMaxFileSizeOver) {
           isMaxFileSizeOver = true
@@ -158,8 +150,24 @@ export const buildMessageFile = async (
       })
 
       newMessages.push({
-        text: text,
+        content: content,
         files: files,
+        is_show_cut_line: showCutLine,
+        slack: {
+          anthor: {
+            id: anthor?.slack.id || "",
+            name: anthor?.discord.name || "NoName",
+            type: message.bot_id
+              ? "bot"
+              : anthor?.slack.deleted
+              ? "cancel-user"
+              : "active-user",
+            icon: message.bot_id ? "🤖" : anthor?.slack.deleted ? "🥶" : "😃",
+          },
+          post_datetime: message.ts
+            ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
+            : "",
+        },
       })
     }
 
@@ -283,6 +291,21 @@ export const createMessage = async (
     let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
+        let content = ""
+
+        // メッセージ内容にチャットの区切りが見やすいように切り取り線を追加
+        if (message.is_show_cut_line) {
+          content += "------------------------------------------------\n"
+        }
+
+        // メッセージ内容に絵文字アイコン、ユーザー名、投稿日時を追加
+        const anthor = message.slack?.anthor
+        if (anthor) {
+          content += `${anthor.icon}  **${anthor.name}**  ${message.slack?.post_datetime}\n`
+        }
+
+        content += message.content
+
         /**
          * サーバーブーストレベルに応じて、最大ファイルサイズを超過したファイルは、
          * ファイルをアップロードせず、ファイルURLを添付するようにする
@@ -293,7 +316,6 @@ export const createMessage = async (
         const uploadFileUrls = message.files
           ?.filter((file) => file.size < maxFileSize)
           .map((file) => file.url)
-        let content = message.text
         if (maxSizeOverFileUrls) {
           isMaxFileSizeOver = true
           for (const file of maxSizeOverFileUrls) {
@@ -305,18 +327,19 @@ export const createMessage = async (
           content: content,
           files: uploadFileUrls,
         })
+
         newMessages.push({
           ...message,
           ...{
-            message_id: result.id,
-            channel_id: result.channelId,
-            guild_id: result.guildId ? result.guildId : undefined,
+            message_id: result.id || "",
+            channel_id: result.channelId || "",
+            guild_id: result.guildId || "",
+            timestamp: result.createdTimestamp,
             anthor: {
               id: result.author.id,
-              is_bot: result.author.bot,
               name: result.author.username,
+              type: "bot",
             },
-            timestamp: result.createdTimestamp,
           },
         })
       }
@@ -419,16 +442,13 @@ export const deleteMessage = async (
           newMessages.push({
             ...message,
             ...{
-              message_id: result?.id,
-              channel_id: result?.channelId,
-              guild_id: result?.guildId ? result?.guildId : undefined,
               timestamp: result?.editedTimestamp
                 ? result?.editedTimestamp
                 : undefined,
               anthor: {
-                id: result?.author.id,
-                is_bot: result?.author.bot,
-                name: result?.author.username,
+                id: result?.author.id || "",
+                name: result?.author.username || "",
+                type: "bot",
               },
             },
           })
