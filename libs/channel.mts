@@ -2,7 +2,7 @@ import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType } from "discord.js"
-import type { Guild } from "discord.js"
+import type { Guild as DiscordClientType } from "discord.js"
 import type { Category } from "./category.mjs"
 import { getMessageFilePaths } from "./message.mjs"
 
@@ -155,7 +155,7 @@ export const buildChannelFile = async (
 
 /**
  * Create channel
- * @param discordGuild
+ * @param discordClient
  * @param channels
  * @param distChannelFilePath
  * @param defaultCategory
@@ -163,7 +163,7 @@ export const buildChannelFile = async (
  * @param migrateArchive
  */
 export const createChannel = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string,
   defaultCategory: Category,
@@ -179,7 +179,7 @@ export const createChannel = async (
     const newChannels: Channel[] = []
     for (const channel of channels) {
       if (!channel.discord.is_archived || migrateArchive) {
-        const result = await discordGuild.channels.create({
+        const result = await discordClient.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           topic: channel.discord.topic ? channel.discord.topic : undefined,
@@ -235,12 +235,12 @@ export const createChannel = async (
 
 /**
  * Delete channel
- * @param discordGuild
+ * @param discordClient
  * @param channels
  * @param distChannelFilePath
  */
 export const deleteChannel = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string
 ): Promise<{
@@ -252,7 +252,7 @@ export const deleteChannel = async (
     // チャンネルを削除する
     const newChannels: Channel[] = []
     for (const channel of channels) {
-      await discordGuild.channels.delete(channel.discord.channel_id)
+      await discordClient.channels.delete(channel.discord.channel_id)
       channel.discord.is_deleted = true
       newChannels.push(channel)
     }
