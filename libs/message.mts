@@ -6,7 +6,8 @@ import {
   Message as SlackBaseMessage,
   FileElement,
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { ChannelType, Guild } from "discord.js"
+import { ChannelType } from "discord.js"
+import type { Guild as DiscordClientType } from "discord.js"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
 
@@ -257,14 +258,14 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 
 /**
  *  Create message
- * @param discordGuild
+ * @param discordClient
  * @param channelId
  * @param maxFileSize
  * @param distMessageFilePath
  * @param messages
  */
 export const createMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
   maxFileSize: number,
@@ -277,7 +278,7 @@ export const createMessage = async (
 }> => {
   try {
     // メッセージを作成
-    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const channelGuild = discordClient.channels.cache.get(channelId)
     const newMessages: Message[] = []
     let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
@@ -348,7 +349,7 @@ export const createMessage = async (
  * Create all message
  */
 export const createAllMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
   isMaxFileSizeOver?: boolean
@@ -366,7 +367,7 @@ export const createAllMessage = async (
               throw new Error(getMessageFileResult.message)
             }
             const createMessageResult = await createMessage(
-              discordGuild,
+              discordClient,
               getMessageFileResult.messages,
               channel.discord.channel_id,
               channel.discord.guild.max_file_size,
@@ -390,13 +391,13 @@ export const createAllMessage = async (
 
 /**
  *  Delete message
- * @param discordGuild
+ * @param discordClient
  * @param channelId
  * @param distMessageFilePath
  * @param messages
  */
 export const deleteMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
   distMessageFilePath: string
@@ -407,7 +408,7 @@ export const deleteMessage = async (
 }> => {
   try {
     // メッセージを削除
-    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const channelGuild = discordClient.channels.cache.get(channelId)
     const newMessages: Message[] = []
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
@@ -458,7 +459,7 @@ export const deleteMessage = async (
  * Delete all message
  */
 export const deleteAllMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
   status: "success" | "failed"
@@ -474,7 +475,7 @@ export const deleteAllMessage = async (
               throw new Error(getMessageFileResult.message)
             }
             const deleteMessageResult = await deleteMessage(
-              discordGuild,
+              discordClient,
               getMessageFileResult.messages,
               channel.discord.channel_id,
               messageFilePath
