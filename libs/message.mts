@@ -2,21 +2,36 @@ import { access, readFile, readdir, mkdir, writeFile } from "node:fs/promises"
 import { statSync, constants } from "node:fs"
 import { dirname, join } from "node:path"
 import { fromUnixTime, format } from "date-fns"
-import { Message as SlackMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
+import {
+  Message as SlackBaseMessage,
+  FileElement,
+} from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, Guild } from "discord.js"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
+
+export interface SlackMessage extends SlackBaseMessage {
+  files?: FileElement[]
+}
 
 export interface Message {
   message_id?: string
   channel_id?: string
   guild_id?: string
   text: string
-  timestamp?: number
+  files?: {
+    id: string
+    file_type: string
+    name: string
+    size: number
+    url: string
+    download_url: string
+  }[]
   author?: {
     id: string
     is_bot: boolean
   }
+  timestamp?: number
 }
 
 /**
@@ -106,8 +121,6 @@ export const buildMessageFile = async (
         : ""
       text += `${icon}  **${name}**  ${timestamp}\n`
 
-      // TODO: ここに添付ファイルのダウンロード処理を書く
-
       // TODO: ここにサブタイプに応じて必要なら処理を書く
       // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
 
@@ -125,8 +138,21 @@ export const buildMessageFile = async (
         }
       }
 
+      // 添付ファイルがあれば追加
+      const files: Message["files"] = message.files?.map((file) => {
+        return {
+          id: file.id || "",
+          file_type: file.filetype || "",
+          name: file.name || "",
+          size: file.size || 0,
+          url: file.url_private || "",
+          download_url: file.url_private_download || "",
+        }
+      })
+
       newMessages.push({
         text: text,
+        files: files,
       })
     }
 
@@ -240,12 +266,12 @@ export const createMessage = async (
             message_id: result.id,
             channel_id: result.channelId,
             guild_id: result.guildId ? result.guildId : undefined,
-            timestamp: result.createdTimestamp,
             anthor: {
               id: result.author.id,
               is_bot: result.author.bot,
               name: result.author.username,
             },
+            timestamp: result.createdTimestamp,
           },
         })
       }

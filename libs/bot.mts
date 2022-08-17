@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import { Message as SlackMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
+import { Message as SlackBaseMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { WebClient as SlackClient } from "@slack/web-api"
 import type { Channel } from "./channel.mjs"
 
@@ -56,7 +56,7 @@ export const getMessageBotId = async (
     for (const channel of channels) {
       for (const messageFilePath of channel.slack.message_file_paths) {
         const srcMessageFile = await readFile(messageFilePath, "utf8")
-        const srcMessage: SlackMessage[] = JSON.parse(srcMessageFile)
+        const srcMessage: SlackBaseMessage[] = JSON.parse(srcMessageFile)
         botIds = [
           ...botIds,
           ...srcMessage
