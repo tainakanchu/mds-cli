@@ -117,22 +117,34 @@ export const buildMessageFile = async (
     const messages = JSON.parse(messageFile) as SlackMessage[]
     let isMaxFileSizeOver = false
     for (const message of messages) {
-      // メッセージの送信者情報を取得
-      const anthor = users.find(
-        (user) =>
-          user.slack.id === message.user || user.slack.id === message.bot_id
-      )
-
-      // テキスト内のメンションを、メッセージ送信時にメンションされないユーザー名もしくはBot名に置換
       let content = message.text || ""
-      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(content)) {
+
+      // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
+      if (/<@U[A-Z0-9]{10}>/.test(content)) {
         for (const user of users) {
-          content = content.replaceAll(
-            new RegExp(`<@${user.slack.id}>`, "g"),
-            `@${user.discord.name}`
-          )
+          if (new RegExp(`<@${user.slack.id}>`, "g").test(content)) {
+            content = content.replaceAll(
+              new RegExp(`<@${user.slack.id}>`, "g"),
+              `@${user.discord.name}`
+            )
+          }
         }
       }
+
+      // メッセージ内のURLを、Discordで表示される形式に置換
+      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+
+      // メッセージ内の太文字を、Discordで表示される形式に置換
+      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+
+      // メッセージ内の斜体文字を、Discordで表示される形式に置換
+      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "*")
+
+      // メッセージ内の打ち消し線を、Discordで表示される形式に置換
+      if (/~*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
+
+      // メッセージ内の引用タグを、Discordで表示される形式に置換
+      if (/&gt; /.test(content)) content = content.replaceAll("&gt; ", "> ")
 
       // 添付ファイルを取得
       const files: Message["files"] = message.files?.map((file) => {
@@ -148,6 +160,12 @@ export const buildMessageFile = async (
           download_url: file.url_private_download || "",
         }
       })
+
+      // メッセージの送信者情報を取得
+      const anthor = users.find(
+        (user) =>
+          user.slack.id === message.user || user.slack.id === message.bot_id
+      )
 
       newMessages.push({
         content: content,
@@ -293,12 +311,12 @@ export const createMessage = async (
       for (const message of messages) {
         let content = ""
 
-        // メッセージ内容にチャットの区切りが見やすいように切り取り線を追加
+        // メッセージに切り取り線を追加(チャットの区切りが見やすいように)
         if (message.is_show_cut_line) {
           content += "------------------------------------------------\n"
         }
 
-        // メッセージ内容に絵文字アイコン、ユーザー名、投稿日時を追加
+        // メッセージに絵文字アイコン、ユーザー名、投稿日時を追加
         const anthor = message.slack?.anthor
         if (anthor) {
           content += `${anthor.icon}  **${anthor.name}**  ${message.slack?.post_datetime}\n`
@@ -306,10 +324,7 @@ export const createMessage = async (
 
         content += message.content
 
-        /**
-         * サーバーブーストレベルに応じて、最大ファイルサイズを超過したファイルは、
-         * ファイルをアップロードせず、ファイルURLを添付するようにする
-         */
+        // サーバーブーストレベルに応じて、最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付するようにする
         const maxSizeOverFileUrls = message.files?.filter(
           (file) => file.size > maxFileSize
         )
