@@ -35,13 +35,15 @@ export interface Message {
     type: "bot"
   }
   timestamp?: number | 1431442800
-  slack?: {
+  slack: {
     anthor: {
       id: string
       name: string
       type: "bot" | "active-user" | "cancel-user"
+      color: string | "808080"
       icon: "🤖" | "🥶" | "😃"
     }
+    timestamp?: number | 1375282800
     post_datetime: string
   }
 }
@@ -138,7 +140,7 @@ export const buildMessageFile = async (
       if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
 
       // メッセージ内の斜体文字を、Discordで表示される形式に置換
-      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "*")
+      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
 
       // メッセージ内の打ち消し線を、Discordで表示される形式に置換
       if (/~*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
@@ -162,7 +164,7 @@ export const buildMessageFile = async (
       })
 
       // メッセージの送信者情報を取得
-      const anthor = users.find(
+      const slackAnthor = users.find(
         (user) =>
           user.slack.id === message.user || user.slack.id === message.bot_id
       )
@@ -173,17 +175,26 @@ export const buildMessageFile = async (
         is_show_cut_line: showCutLine,
         slack: {
           anthor: {
-            id: anthor?.slack.id || "",
-            name: anthor?.discord.name || "NoName",
+            id: slackAnthor?.slack.id || "",
+            name: slackAnthor?.slack.name || "NoName",
             type: message.bot_id
               ? "bot"
-              : anthor?.slack.deleted
+              : slackAnthor?.slack.deleted
               ? "cancel-user"
               : "active-user",
-            icon: message.bot_id ? "🤖" : anthor?.slack.deleted ? "🥶" : "😃",
+            color: slackAnthor?.slack.color || "808080",
+            icon: message.bot_id
+              ? "🤖"
+              : slackAnthor?.slack.deleted
+              ? "🥶"
+              : "😃",
           },
+          timestamp: Math.floor(Number(message.ts || 1375282800)),
           post_datetime: message.ts
-            ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
+            ? format(
+                fromUnixTime(Number(message.ts || 1375282800)),
+                "yyyy/MM/dd HH:mm"
+              )
             : "",
         },
       })
@@ -317,23 +328,23 @@ export const createMessage = async (
         }
 
         // メッセージに絵文字アイコン、ユーザー名、投稿日時を追加
-        const anthor = message.slack?.anthor
-        if (anthor) {
-          content += `${anthor.icon}  **${anthor.name}**  ${message.slack?.post_datetime}\n`
+        const slackAnthor = message.slack?.anthor
+        if (slackAnthor) {
+          content += `${slackAnthor.icon}  **${slackAnthor.name}**  ${message.slack?.post_datetime}\n`
         }
 
         content += message.content
 
-        // サーバーブーストレベルに応じて、最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付するようにする
-        const maxSizeOverFileUrls = message.files?.filter(
+        // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
+        const sizeOverFileUrls = message.files?.filter(
           (file) => file.size > maxFileSize
         )
         const uploadFileUrls = message.files
           ?.filter((file) => file.size < maxFileSize)
           .map((file) => file.url)
-        if (maxSizeOverFileUrls) {
+        if (sizeOverFileUrls) {
           isMaxFileSizeOver = true
-          for (const file of maxSizeOverFileUrls) {
+          for (const file of sizeOverFileUrls) {
             content += `\n${file.url}`
           }
         }
