@@ -73,6 +73,12 @@ interface Options {
     process.exit(0)
   }
   spinner.success()
+  // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
+  if (createAllMessageResult.isMaxFileSizeOver) {
+    spinner.warning(
+      "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
+    )
+  }
 
   process.exit(0)
 })()

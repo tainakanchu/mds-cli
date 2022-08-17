@@ -19,6 +19,11 @@ export interface Channel {
     channel_name: string
     is_archived: boolean
     is_deleted: boolean
+    guild: {
+      boost_level: 0 | 1 | 2 | 3
+      boost_count: number
+      max_file_size: 8000000 | 50000000 | 100000000
+    }
     topic: string
     message_file_paths: string[]
   }
@@ -119,6 +124,11 @@ export const buildChannelFile = async (
             channel_name: channel.name || "",
             is_archived: channel.is_archived || false,
             is_deleted: false,
+            guild: {
+              boost_level: 0,
+              boost_count: 0,
+              max_file_size: 8000000,
+            },
             topic: channel.purpose?.value ? channel.purpose.value : "",
             message_file_paths: distMessageFilePaths,
           },
@@ -177,13 +187,34 @@ export const createChannel = async (
             ? archiveCategory.id
             : defaultCategory.id,
         })
-        // チャンネルのIDを更新する
-        channel.discord.channel_id = result.id
-        newChannels.push(channel)
+
+        // サーバーブーストレベルとファイルサイズを算出する
+        const boostCount = result.guild.premiumSubscriptionCount || 0
+        let boostLevel: Channel["discord"]["guild"]["boost_level"] = 0
+        if (boostCount >= 2 && boostCount < 7) {
+          boostLevel = 1
+        } else if (boostCount >= 7 && boostCount < 14) {
+          boostLevel = 2
+        } else if (boostCount >= 14) {
+          boostLevel = 3
+        }
+        let maxFileSize: Channel["discord"]["guild"]["max_file_size"] = 8000000
+        if (boostLevel === 2) {
+          maxFileSize = 50000000
+        } else if (boostLevel === 3) {
+          maxFileSize = 100000000
+        }
+
+        const newChannel = { ...channel }
+        newChannel.discord.channel_id = result.id
+        newChannel.discord.guild.boost_level = boostLevel
+        newChannel.discord.guild.boost_count = boostCount
+        newChannel.discord.guild.max_file_size = maxFileSize
+        newChannels.push(newChannel)
       }
     }
 
-    // チャンネルファイルを作成する
+    // チャンネルファイルを更新する
     const createChannelFileResult = await createChannelFile(
       distChannelFilePath,
       newChannels

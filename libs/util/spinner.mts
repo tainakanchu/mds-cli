@@ -8,8 +8,9 @@ export class Spinner {
     loading: "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏",
     success: "✔️",
     failed: "×",
+    warning: "⚠️",
   }
-  private charsType: "loading" | "success" | "failed" = "loading"
+  private charsType: "loading" | "success" | "failed" | "warning" = "loading"
   private charIndex: number = 0
   private delay: number = 60
   private id?: NodeJS.Timer
@@ -29,6 +30,8 @@ export class Spinner {
       char = pc.green(char)
     } else if (this.charsType === "failed") {
       char = pc.red(char)
+    } else if (this.charsType === "warning") {
+      char = pc.yellow(char)
     }
     this.stream.write(char + " " + pc.blue(this.text))
     this.charIndex = (this.charIndex + 1) % chars.length
@@ -54,7 +57,6 @@ export class Spinner {
   success(text?: string | null, message?: any) {
     this.stop()
     if (text) this.text = text
-    if (this.text === "") this.text = "Success"
     this.charsType = "success"
     console.log(pc.green(this.chars.success) + " " + pc.blue(this.text))
     if (message) console.log(message)
@@ -63,9 +65,12 @@ export class Spinner {
   failed(text?: string | null, message?: any) {
     this.stop()
     if (text) this.text = text
-    if (this.text === "") this.text = "Failed"
     this.charsType = "failed"
     console.log(pc.red(this.chars.failed) + " " + pc.blue(this.text))
     if (message) console.error(message)
+  }
+
+  warning(text: string) {
+    console.log(pc.yellow(this.chars.warning) + " " + pc.yellow(text))
   }
 }

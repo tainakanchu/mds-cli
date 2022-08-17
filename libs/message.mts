@@ -90,9 +90,11 @@ export const buildMessageFile = async (
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
+  maxFileSize: number,
   showCutLine: boolean
 ): Promise<{
   messages: Message[]
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
@@ -101,6 +103,7 @@ export const buildMessageFile = async (
     await access(srcMessageFilePath, constants.R_OK)
     const messageFile = await readFile(srcMessageFilePath, "utf8")
     const messages = JSON.parse(messageFile) as SlackMessage[]
+    let isMaxFileSizeOver = false
     for (const message of messages) {
       let text = ""
 
@@ -140,6 +143,9 @@ export const buildMessageFile = async (
 
       // 添付ファイルがあれば追加
       const files: Message["files"] = message.files?.map((file) => {
+        if (file.size && file.size > maxFileSize && !isMaxFileSizeOver) {
+          isMaxFileSizeOver = true
+        }
         return {
           id: file.id || "",
           file_type: file.filetype || "",
@@ -168,7 +174,11 @@ export const buildMessageFile = async (
       }
     }
 
-    return { messages: newMessages, status: "success" }
+    return {
+      messages: newMessages,
+      isMaxFileSizeOver: isMaxFileSizeOver,
+      status: "success",
+    }
   } catch (error) {
     return { messages: [], status: "failed", message: error }
   }
@@ -185,10 +195,12 @@ export const buildAllMessageFile = async (
   users: User[],
   showCutLine: boolean
 ): Promise<{
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
   try {
+    let isMaxFileSizeOver = false
     await Promise.all(
       channels.map(
         async (channel) =>
@@ -197,21 +209,28 @@ export const buildAllMessageFile = async (
               async (srcMessageFilePath, index) => {
                 const distMessageFilePath =
                   channel.discord.message_file_paths[index]
-                const { status, message } = await buildMessageFile(
+                const buildMessageFileResult = await buildMessageFile(
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
+                  channel.discord.guild.max_file_size,
                   showCutLine
                 )
-                if (status === "failed") {
-                  throw new Error(message)
+                if (
+                  buildMessageFileResult.isMaxFileSizeOver &&
+                  !isMaxFileSizeOver
+                ) {
+                  isMaxFileSizeOver = true
+                }
+                if (buildMessageFileResult.status === "failed") {
+                  throw new Error(buildMessageFileResult.message)
                 }
               }
             )
           )
       )
     )
-    return { status: "success" }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
     return { status: "failed", message: error }
   }
@@ -240,6 +259,7 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
  *  Create message
  * @param discordGuild
  * @param channelId
+ * @param maxFileSize
  * @param distMessageFilePath
  * @param messages
  */
@@ -247,9 +267,11 @@ export const createMessage = async (
   discordGuild: Guild,
   messages: Message[],
   channelId: string,
+  maxFileSize: number,
   distMessageFilePath: string
 ): Promise<{
   messages: Message[]
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
@@ -257,9 +279,31 @@ export const createMessage = async (
     // メッセージを作成
     const channelGuild = discordGuild.channels.cache.get(channelId)
     const newMessages: Message[] = []
+    let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        const result = await channelGuild.send(message.text)
+        /**
+         * サーバーブーストレベルに応じて、最大ファイルサイズを超過したファイルは、
+         * ファイルをアップロードせず、ファイルURLを添付するようにする
+         */
+        const maxSizeOverFileUrls = message.files?.filter(
+          (file) => file.size > maxFileSize
+        )
+        const uploadFileUrls = message.files
+          ?.filter((file) => file.size < maxFileSize)
+          .map((file) => file.url)
+        let content = message.text
+        if (maxSizeOverFileUrls) {
+          isMaxFileSizeOver = true
+          for (const file of maxSizeOverFileUrls) {
+            content += `\n${file.url}`
+          }
+        }
+
+        const result = await channelGuild.send({
+          content: content,
+          files: uploadFileUrls,
+        })
         newMessages.push({
           ...message,
           ...{
@@ -290,7 +334,11 @@ export const createMessage = async (
       }
     }
 
-    return { messages: newMessages, status: "success" }
+    return {
+      messages: newMessages,
+      isMaxFileSizeOver: isMaxFileSizeOver,
+      status: "success",
+    }
   } catch (error) {
     return { messages: [], status: "failed", message: error }
   }
@@ -303,10 +351,12 @@ export const createAllMessage = async (
   discordGuild: Guild,
   channels: Channel[]
 ): Promise<{
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
   try {
+    let isMaxFileSizeOver = false
     await Promise.all(
       channels.map(async (channel) => {
         await Promise.all(
@@ -319,16 +369,20 @@ export const createAllMessage = async (
               discordGuild,
               getMessageFileResult.messages,
               channel.discord.channel_id,
+              channel.discord.guild.max_file_size,
               messageFilePath
             )
             if (createMessageResult.status === "failed") {
               throw new Error(createMessageResult.message)
             }
+            if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
+              isMaxFileSizeOver = true
+            }
           })
         )
       })
     )
-    return { status: "success" }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
     return { status: "failed", message: error }
   }
