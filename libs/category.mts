@@ -122,23 +122,22 @@ export const deleteCategory = async (
     for (const category of categories) {
       if (category.id) {
         await discordClient.channels.delete(category.id)
-        category.id = ""
       }
       newCategories.push(category)
     }
 
     // カテゴリーファイルを更新する
-    const createCategoryFileResult = await createCategoryFile(
-      distCategoryFilePath,
-      newCategories
-    )
-    if (createCategoryFileResult.status === "failed") {
-      return {
-        categories: [],
-        status: "failed",
-        message: createCategoryFileResult.message,
-      }
-    }
+    // const createCategoryFileResult = await createCategoryFile(
+    //   distCategoryFilePath,
+    //   newCategories
+    // )
+    // if (createCategoryFileResult.status === "failed") {
+    //   return {
+    //     categories: [],
+    //     status: "failed",
+    //     message: createCategoryFileResult.message,
+    //   }
+    // }
 
     return { categories: newCategories, status: "success" }
   } catch (error) {
