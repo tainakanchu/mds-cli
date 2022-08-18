@@ -1,7 +1,7 @@
 import { access, mkdir, writeFile, constants, readFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import { ChannelType } from "discord.js"
-import type { Guild } from "discord.js"
+import type { Guild as DiscordClientType } from "discord.js"
 
 export interface Category {
   id: string
@@ -55,12 +55,12 @@ export const createCategoryFile = async (
 
 /**
  * Create category
- * @param discordGuild
+ * @param discordClient
  * @param categories
  * @param distCategoryFilePath
  */
 export const createCategory = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   categories: Category[],
   distCategoryFilePath: string
 ): Promise<{
@@ -72,7 +72,7 @@ export const createCategory = async (
     // カテゴリーを作成する
     const newCategories: Category[] = []
     for (const category of categories) {
-      const rusult = await discordGuild.channels.create({
+      const rusult = await discordClient.channels.create({
         name: category.name,
         type: ChannelType.GuildCategory,
       })
@@ -103,12 +103,12 @@ export const createCategory = async (
 
 /**
  * Delete category
- * @param discordGuild
+ * @param discordClient
  * @param categories
  * @param distCategoryFilePath
  */
 export const deleteCategory = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   categories: Category[],
   distCategoryFilePath: string
 ): Promise<{
@@ -121,24 +121,23 @@ export const deleteCategory = async (
     const newCategories: Category[] = []
     for (const category of categories) {
       if (category.id) {
-        await discordGuild.channels.delete(category.id)
-        category.id = ""
+        await discordClient.channels.delete(category.id)
       }
       newCategories.push(category)
     }
 
     // カテゴリーファイルを更新する
-    const createCategoryFileResult = await createCategoryFile(
-      distCategoryFilePath,
-      newCategories
-    )
-    if (createCategoryFileResult.status === "failed") {
-      return {
-        categories: [],
-        status: "failed",
-        message: createCategoryFileResult.message,
-      }
-    }
+    // const createCategoryFileResult = await createCategoryFile(
+    //   distCategoryFilePath,
+    //   newCategories
+    // )
+    // if (createCategoryFileResult.status === "failed") {
+    //   return {
+    //     categories: [],
+    //     status: "failed",
+    //     message: createCategoryFileResult.message,
+    //   }
+    // }
 
     return { categories: newCategories, status: "success" }
   } catch (error) {

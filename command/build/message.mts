@@ -14,30 +14,9 @@ const distUserFilePath = join(distDirPath, "user.json")
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
 
-interface Options {
-  showCutLine?: boolean
-}
-
 ;(async () => {
   const program = new Command()
-  program
-    .description("Build message file command")
-    .requiredOption(
-      "-sc, --show-cut-line [boolean]",
-      "Whether to show cut line between message",
-      process.env.SHOW_CUT_LINE === "true" ? true : false
-    )
-    .parse(process.argv)
-
-  // パラメーターの取得
-  spinner.loading("Check parameter")
-  const options: Options = program.opts()
-  const { showCutLine } = options
-  if (showCutLine === undefined) {
-    spinner.failed(null, "Required parameter is not found")
-    process.exit(0)
-  }
-  spinner.success()
+  program.description("Build message file command").parse(process.argv)
 
   // チャンネルを取得する
   spinner.loading("Get channel")
@@ -61,16 +40,18 @@ interface Options {
 
   // メッセージファイルを作成する
   spinner.loading("Build message file")
-  const buildAllMessageFileResult = await buildAllMessageFile(
-    channels,
-    users,
-    showCutLine
-  )
+  const buildAllMessageFileResult = await buildAllMessageFile(channels, users)
   if (buildAllMessageFileResult.status === "failed") {
     spinner.failed(null, buildAllMessageFileResult.message)
     process.exit(0)
   }
   spinner.success()
+  // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
+  if (buildAllMessageFileResult.isMaxFileSizeOver) {
+    spinner.warning(
+      "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
+    )
+  }
 
   process.exit(0)
 })()

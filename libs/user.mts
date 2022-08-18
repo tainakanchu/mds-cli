@@ -8,7 +8,13 @@ export interface User {
     id: string
     name: string
     deleted: boolean
+    color: string | "808080"
+    image_url: string
     is_bot: boolean
+    bot?: {
+      bot_id: string
+      app_id: string
+    }
   }
   discord: {
     id: string
@@ -52,24 +58,31 @@ export const buildUser = async (
     const usersFile = await readFile(srcUserFilePath, "utf8")
     const users = JSON.parse(usersFile)
       .map((user: SlackUser) => {
-        let id = user.id || ""
-
+        // Botの場合はBot情報を取得
+        let botInfo: User["slack"]["bot"] = undefined
         if (user.is_bot) {
           const appId = user.profile?.api_app_id || ""
-          const botId = bots.find((bot) => bot.app_id === appId)?.id || ""
-          id = botId
+          const botId =
+            bots.find((bot) => bot.app_id === appId)?.id ||
+            user.profile?.bot_id ||
+            ""
+          botInfo = { bot_id: botId, app_id: appId }
         }
 
+        // ユーザー名もしくはBot名を取得
         const name = user.is_bot
           ? user.real_name || ""
           : user.profile?.display_name || ""
 
         return {
           slack: {
-            id: id,
+            id: user.id || "",
             name: name,
             deleted: user.deleted || false,
             is_bot: user.is_bot || false,
+            color: user.color || "808080",
+            image_url: user.profile?.image_512 || "",
+            bot: botInfo,
           },
           discord: {
             id: "",

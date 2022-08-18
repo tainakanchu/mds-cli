@@ -8,9 +8,9 @@ MSDは(Migrate from Slack to Discord)の略称
 > **Warning**  
 > このCLIは簡易的に作ったもののため、十分にテストされていません  
 > 将来的にSlackやDiscordのAPIの仕様変更によって、使用できなくなる可能性があります  
-> 動作の保証ができないので、利用する際には自己責任でお願いします  
+> 動作の保証ができないので、利用する際は自己責任でお願いします  
 
-SlackのエクスポートデータをDiscordに移行できるデータに変換し、DiscordBotがチャンネルの作成とメッセージの出力を行います  
+SlackのエクスポートデータをDiscordに出力できるデータに変換し、DiscordBot経由でチャンネルの作成とメッセージの出力を行うことで移行します  
 
 ```mermaid
 %%{init:{'theme':'dark','themeCSS':" .node rect {fill:#fff;} label {font-size:20px; font-weight:bold; color:#000} .output {font-size:36px;} img {background-color:#fff; weight:50px; height:50px;}"}}%%
@@ -20,28 +20,30 @@ flowchart LR
   discord(<img src='./docs/img/discord.png' /><br><label>Discord</label>)
   slackBot(<img src='./docs/img/slack-bot.png' /><br><label>SlackBot</label>)
   discordBot(<img src='./docs/img/discord-bot.png' /><br><label>DiscordBot</label>)
-  exportFile(<img src='./docs/img/export-file.png' /><br><label>Export File</label>)
+  exportFile(<img src='./docs/img/slack-file.png' /><br><label>Export File</label>)
+  migrationFile(<img src='./docs/img/discord-file.png' /><br><label>Migration File</label>)
 
-  exportFile <--> |Build| msd
-  msd <--> discordBot
-  discordBot --> |Output| discord
-  msd <--> |Get bot data| slackBot
+  msd <--> |Migrate discord| discordBot
+  discordBot <--> discord
+  msd <--> |Check bot info| slackBot
   slackBot <--> slack
+  exportFile --> |Get slack data| msd
+  msd <--> |Convert slack data| migrationFile
 ```
 
 ## ドキュメント
 
 - [移行されるものと移行されないもの](./docs/migration.md)
-- [初回設定](./docs/init.md)
 - [仕様](./docs/specification.md)
+- [初回設定](./docs/init.md)
 - [参考リンク](./docs/reference.md)
 
 ## 使用方法
 
-[初回設定](./docs/initial-setting.md)を設定完了後、下記のコマンドを順次実行して移行する  
+[初回設定](./docs/initial-setting.md)を完了後、下記のコマンドを順次実行して移行します  
 
 ```zsh
-# チャンネル、ユーザー、メッセージのデータファイルを作成する
+# チャンネル、ユーザー、メッセージの移行ファイルを作成する
 npm run build
 # or
 npm run init
@@ -56,7 +58,7 @@ npm run deploy:channel
 npm run deploy:message
 ```
 
-移行に失敗した場合は、下記のコマンドを実行することでリセットできる  
+移行した内容を元に戻す場合は、下記のコマンドを実行することでリセットできます  
 
 ```zsh
 # チャンネル、メッセージを削除する
@@ -65,20 +67,6 @@ npm run destroy
 npm run destroy:channel
 npm run destroy:message
 ```
-
-## 既知の問題
-
-### メッセージファイルとユーザーファイルのSlackBotのBotIdが照合できない
-
-エクスポートデータの`users.json`ユーザーファイルのBotIdとメッセージファイルに記載されているBotIdが違います  
-[bots.info](https://api.slack.com/methods/bots.info)や[users.info](https://api.slack.com/methods/users.info)のAPIで２つのBotIdを取得しても、updatedが1時間ほど違うだけでそれ以外の情報は同じです  
-BotIdは全てのボットが存在するすべてのワークスペースで一意だそうですが、BotIdがなぜ異なるのか理由は不明です  
-そのため、エクスポートデータだけではBotIdが照合できないので、照合するためにSlackBotを利用しています  
-
-### 並列化・非同期化
-
-for文で直列でやってる処理が多いので、Promise.allなどで並列化できる箇所は並列化したい  
-一部同期関数で処理していて、ブロッキング操作になっている箇所があるので、非同期関数に置き換えたい  
 
 ## License
 

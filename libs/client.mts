@@ -1,15 +1,16 @@
 import { WebClient as SlackClient } from "@slack/web-api"
+import type { WebClient as SlackClientType } from "@slack/web-api"
 import { Client as DiscordClient, GatewayIntentBits } from "discord.js"
-import type { Guild } from "discord.js"
+import type { Guild as DiscordClientType } from "discord.js"
 
 /**
- * Create SlackClient
+ * Create slack client
  * @param slackBotToken
  */
 export const createSlackClient = (
   slackBotToken: string
 ): {
-  slackClient?: SlackClient
+  slackClient?: SlackClientType
   status: "success" | "failed"
   message?: any
 } => {
@@ -21,15 +22,15 @@ export const createSlackClient = (
 }
 
 /**
- * Create DiscordGuild
+ * Create discord client
  * @param discordBotToken: string
  * @param discordServerId: string
  */
-export const createDiscordGuild = async (
+export const createDiscordClient = async (
   discordBotToken: string,
   discordServerId: string
 ): Promise<{
-  discordGuild?: Guild
+  discordClient?: DiscordClientType
   status: "success" | "failed"
   message?: any
 }> => {
@@ -40,7 +41,7 @@ export const createDiscordGuild = async (
     await client.login(discordBotToken)
     const guild = client.guilds.cache.get(discordServerId)
     if (guild) {
-      return { discordGuild: guild, status: "success" }
+      return { discordClient: guild, status: "success" }
     }
     return { status: "failed", message: "Guild is not found" }
   } catch (error) {

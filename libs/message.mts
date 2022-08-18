@@ -1,21 +1,43 @@
 import { access, readFile, readdir, mkdir, writeFile } from "node:fs/promises"
 import { statSync, constants } from "node:fs"
 import { dirname, join } from "node:path"
-import { fromUnixTime, format } from "date-fns"
-import { Message as SlackMessage } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { ChannelType, Guild } from "discord.js"
+import { format, formatISO, fromUnixTime } from "date-fns"
+import {
+  Message as SlackBaseMessage,
+  FileElement,
+} from "@slack/web-api/dist/response/ChatPostMessageResponse"
+import { ChannelType, EmbedType } from "discord.js"
+import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
+
+export interface SlackMessage extends SlackBaseMessage {
+  files?: FileElement[]
+}
 
 export interface Message {
   message_id?: string
   channel_id?: string
   guild_id?: string
-  text: string
-  timestamp?: number
-  author?: {
+  content: string
+  embeds: Embed[]
+  files?: string[]
+  anthor?: {
     id: string
-    is_bot: boolean
+    name: string
+    type: "bot"
+  }
+  timestamp?: number | 1431442800
+  slack: {
+    anthor: {
+      id: string
+      name: string
+      type: "bot" | "active-user" | "cancel-user"
+      type_icon: "🟢" | "🔵" | "🤖"
+      image_url: string
+      color: string | "808080"
+    }
+    timestamp: number | 1375282800
   }
 }
 
@@ -69,15 +91,15 @@ export const createMessageFile = async (
  * @param srcMessageFilePath
  * @param distMessageFilePath
  * @param users
- * @param showCutLine
  */
 export const buildMessageFile = async (
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
-  showCutLine: boolean
+  maxFileSize: number
 ): Promise<{
   messages: Message[]
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
@@ -86,47 +108,118 @@ export const buildMessageFile = async (
     await access(srcMessageFilePath, constants.R_OK)
     const messageFile = await readFile(srcMessageFilePath, "utf8")
     const messages = JSON.parse(messageFile) as SlackMessage[]
+    let isMaxFileSizeOver = false
     for (const message of messages) {
-      let text = ""
+      let content = message.text || ""
 
-      // テキストの最初にチャットの区切りが見やすいように切り取り線を追加
-      if (showCutLine)
-        text += "------------------------------------------------\n"
+      // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
+      if (/<@U[A-Z0-9]{10}>/.test(content)) {
+        for (const user of users) {
+          if (new RegExp(`<@${user.slack.id}>`, "g").test(content)) {
+            content = content.replaceAll(
+              new RegExp(`<@${user.slack.id}>`, "g"),
+              `@${user.discord.name}`
+            )
+          }
+        }
+      }
 
-      // テキストに絵文字アイコンとユーザー名とタイムスタンプを追加
+      // メッセージ内のURLを、Discordで表示される形式に置換
+      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+
+      // メッセージ内の太文字を、Discordで表示される形式に置換
+      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+
+      // メッセージ内の斜体文字を、Discordで表示される形式に置換
+      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
+
+      // メッセージ内の打ち消し線を、Discordで表示される形式に置換
+      if (/~*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
+
+      // メッセージ内の引用タグを、Discordで表示される形式に置換
+      if (/&gt; /.test(content)) content = content.replaceAll("&gt; ", "> ")
+
+      // 埋め込みフィールドを作成
+      const fields: Embed["fields"] = [
+        {
+          name: "------------------------------------------------",
+          value: content,
+        },
+      ]
+
+      // 添付ファイルを取得
+      const files = message.files?.map((file) => {
+        if (file.size && file.size > maxFileSize && !isMaxFileSizeOver) {
+          isMaxFileSizeOver = true
+        }
+        return {
+          id: file.id || "",
+          file_type: file.filetype || "",
+          name: file.name || "",
+          size: file.size || 0,
+          url: file.url_private || "",
+          download_url: file.url_private_download || "",
+        }
+      })
+
+      // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
+      const sizeOverFileUrlsFields = files
+        ?.filter((file) => file.size >= maxFileSize)
+        .map((file) => ({ name: file.name, value: file.url }))
+      if (sizeOverFileUrlsFields) {
+        fields.push(...sizeOverFileUrlsFields)
+      }
+      const uploadFileUrls = files
+        ?.filter((file) => file.size < maxFileSize)
+        .map((file) => file.url)
+
+      // メッセージの送信者情報を取得
       const user = users.find(
         (user) =>
           user.slack.id === message.user || user.slack.id === message.bot_id
       )
-
-      const name = user ? user.discord.name : "NoName"
-      const icon = message.bot_id ? "🤖" : user?.slack.deleted ? "🥶" : "😃"
-      const timestamp = message.ts
-        ? format(fromUnixTime(Number(message.ts)), "yyyy/MM/dd HH:mm")
-        : ""
-      text += `${icon}  **${name}**  ${timestamp}\n`
-
-      // TODO: ここに添付ファイルのダウンロード処理を書く
-
-      // TODO: ここにサブタイプに応じて必要なら処理を書く
-      // "bot_add" | "bot_message" | "bot_remove" | "channel_join" | "channel_topic" | "channel_archive" | "channel_purpose"
-
-      // テキストにメッセージ内容を追加
-      text += message.text
-
-      // テキスト内のメンションをユーザー名もしくはBot名に置換
-      if (new RegExp(/<@U[A-Z0-9]{10}>/g).test(text)) {
-        for (const user of users) {
-          // Discordで送信時にメンションされないように加工
-          text = text.replaceAll(
-            new RegExp(`<@${user.slack.id}>`, "g"),
-            `@${user.discord.name}`
-          )
-        }
+      if (!user) {
+        throw new Error("Failed to get user for message")
+      }
+      const anthor: Message["slack"]["anthor"] = {
+        id: user.slack.id,
+        name: user.slack.name,
+        type: message.bot_id
+          ? "bot"
+          : user.slack.deleted
+          ? "cancel-user"
+          : "active-user",
+        color: user.slack.color,
+        type_icon: message.bot_id ? "🤖" : user.slack.deleted ? "🔵" : "🟢",
+        image_url: user.slack.image_url,
       }
 
+      // 小数点以下のタイムスタンプを切り捨て
+      const timestamp = Math.floor(Number(message.ts))
+
+      // メッセージの投稿日時を算出
+      const postTime = format(fromUnixTime(timestamp), " HH:mm")
+      const isoPostDatetime = formatISO(fromUnixTime(timestamp))
+
       newMessages.push({
-        text: text,
+        content: content,
+        embeds: [
+          {
+            type: EmbedType.Rich,
+            color: parseInt(anthor.color, 16),
+            fields: fields,
+            timestamp: isoPostDatetime,
+            author: {
+              name: `${anthor.type_icon} ${anthor.name}    ${postTime}`,
+              icon_url: anthor.image_url,
+            },
+          },
+        ],
+        files: uploadFileUrls,
+        slack: {
+          anthor: anthor,
+          timestamp: timestamp,
+        },
       })
     }
 
@@ -142,7 +235,11 @@ export const buildMessageFile = async (
       }
     }
 
-    return { messages: newMessages, status: "success" }
+    return {
+      messages: newMessages,
+      isMaxFileSizeOver: isMaxFileSizeOver,
+      status: "success",
+    }
   } catch (error) {
     return { messages: [], status: "failed", message: error }
   }
@@ -152,17 +249,17 @@ export const buildMessageFile = async (
  * Build all message file
  * @param channels
  * @param users
- * @param showCutLine
  */
 export const buildAllMessageFile = async (
   channels: Channel[],
-  users: User[],
-  showCutLine: boolean
+  users: User[]
 ): Promise<{
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
   try {
+    let isMaxFileSizeOver = false
     await Promise.all(
       channels.map(
         async (channel) =>
@@ -171,21 +268,27 @@ export const buildAllMessageFile = async (
               async (srcMessageFilePath, index) => {
                 const distMessageFilePath =
                   channel.discord.message_file_paths[index]
-                const { status, message } = await buildMessageFile(
+                const buildMessageFileResult = await buildMessageFile(
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
-                  showCutLine
+                  channel.discord.guild.max_file_size
                 )
-                if (status === "failed") {
-                  throw new Error(message)
+                if (
+                  buildMessageFileResult.isMaxFileSizeOver &&
+                  !isMaxFileSizeOver
+                ) {
+                  isMaxFileSizeOver = true
+                }
+                if (buildMessageFileResult.status === "failed") {
+                  throw new Error(buildMessageFileResult.message)
                 }
               }
             )
           )
       )
     )
-    return { status: "success" }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
     return { status: "failed", message: error }
   }
@@ -212,39 +315,46 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 
 /**
  *  Create message
- * @param discordGuild
+ * @param discordClient
  * @param channelId
  * @param distMessageFilePath
  * @param messages
  */
 export const createMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
   distMessageFilePath: string
 ): Promise<{
   messages: Message[]
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     // メッセージを作成
-    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const channelGuild = discordClient.channels.cache.get(channelId)
     const newMessages: Message[] = []
+    let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        const result = await channelGuild.send(message.text)
+        const result = await channelGuild.send({
+          content: "",
+          files: message.files,
+          embeds: message.embeds,
+        })
+
         newMessages.push({
           ...message,
           ...{
-            message_id: result.id,
-            channel_id: result.channelId,
-            guild_id: result.guildId ? result.guildId : undefined,
+            message_id: result.id || "",
+            channel_id: result.channelId || "",
+            guild_id: result.guildId || "",
             timestamp: result.createdTimestamp,
             anthor: {
               id: result.author.id,
-              is_bot: result.author.bot,
               name: result.author.username,
+              type: "bot",
             },
           },
         })
@@ -264,7 +374,11 @@ export const createMessage = async (
       }
     }
 
-    return { messages: newMessages, status: "success" }
+    return {
+      messages: newMessages,
+      isMaxFileSizeOver: isMaxFileSizeOver,
+      status: "success",
+    }
   } catch (error) {
     return { messages: [], status: "failed", message: error }
   }
@@ -274,35 +388,38 @@ export const createMessage = async (
  * Create all message
  */
 export const createAllMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
+  isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
 }> => {
   try {
+    let isMaxFileSizeOver = false
     await Promise.all(
       channels.map(async (channel) => {
-        await Promise.all(
-          channel.discord.message_file_paths.map(async (messageFilePath) => {
-            const getMessageFileResult = await getMessageFile(messageFilePath)
-            if (getMessageFileResult.status === "failed") {
-              throw new Error(getMessageFileResult.message)
-            }
-            const createMessageResult = await createMessage(
-              discordGuild,
-              getMessageFileResult.messages,
-              channel.discord.channel_id,
-              messageFilePath
-            )
-            if (createMessageResult.status === "failed") {
-              throw new Error(createMessageResult.message)
-            }
-          })
-        )
+        for (const messageFilePath of channel.discord.message_file_paths) {
+          const getMessageFileResult = await getMessageFile(messageFilePath)
+          if (getMessageFileResult.status === "failed") {
+            throw new Error(getMessageFileResult.message)
+          }
+          const createMessageResult = await createMessage(
+            discordClient,
+            getMessageFileResult.messages,
+            channel.discord.channel_id,
+            messageFilePath
+          )
+          if (createMessageResult.status === "failed") {
+            throw new Error(createMessageResult.message)
+          }
+          if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
+            isMaxFileSizeOver = true
+          }
+        }
       })
     )
-    return { status: "success" }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
     return { status: "failed", message: error }
   }
@@ -310,13 +427,13 @@ export const createAllMessage = async (
 
 /**
  *  Delete message
- * @param discordGuild
+ * @param discordClient
  * @param channelId
  * @param distMessageFilePath
  * @param messages
  */
 export const deleteMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
   distMessageFilePath: string
@@ -327,7 +444,7 @@ export const deleteMessage = async (
 }> => {
   try {
     // メッセージを削除
-    const channelGuild = discordGuild.channels.cache.get(channelId)
+    const channelGuild = discordClient.channels.cache.get(channelId)
     const newMessages: Message[] = []
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
@@ -338,16 +455,13 @@ export const deleteMessage = async (
           newMessages.push({
             ...message,
             ...{
-              message_id: result?.id,
-              channel_id: result?.channelId,
-              guild_id: result?.guildId ? result?.guildId : undefined,
               timestamp: result?.editedTimestamp
                 ? result?.editedTimestamp
                 : undefined,
               anthor: {
-                id: result?.author.id,
-                is_bot: result?.author.bot,
-                name: result?.author.username,
+                id: result?.author.id || "",
+                name: result?.author.username || "",
+                type: "bot",
               },
             },
           })
@@ -378,7 +492,7 @@ export const deleteMessage = async (
  * Delete all message
  */
 export const deleteAllMessage = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
   status: "success" | "failed"
@@ -394,7 +508,7 @@ export const deleteAllMessage = async (
               throw new Error(getMessageFileResult.message)
             }
             const deleteMessageResult = await deleteMessage(
-              discordGuild,
+              discordClient,
               getMessageFileResult.messages,
               channel.discord.channel_id,
               messageFilePath

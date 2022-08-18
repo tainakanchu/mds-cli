@@ -1,5 +1,7 @@
 # 初回設定
 
+**移行元のSlackのワークスペース、移行先のDiscordのサーバーがある**前提で、下記の初回設定を順次行ってください  
+
 1. [direnvのインストール](https://github.com/direnv/direnv)
 2. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
 3. [DiscordBotの作成](#create-discord-bot)
@@ -41,12 +43,11 @@ cp .envrc.sample .envrc
 `.envrc`ファイルの環境変数の値に、SlackBotのトークン、DiscordBotのトークン、DiscordのサーバーIDなどの情報を設定する  
 
 ```zsh
+export NODE_OPTIONS=--openssl-legacy-provider # 使用中のライブラリの OpenSSL エラー防止オプション
 export SLACK_BOT_TOKEN="" # SlackBotのトークン
 export DISCORD_BOT_TOKEN="" # DiscordBotのトークン
 export DISCORD_SERVER_ID="" # DiscordのサーバーID
-export NODE_OPTIONS=--openssl-legacy-provider # ライブラリのOpenSSL互換エラー防止用のオプション
 export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
-export SHOW_CUT_LINE="true" # メッセージの間に切り取り線を表示するかどうか
 ```
 
 下記のコマンドで、変更した環境変数の値を反映する  

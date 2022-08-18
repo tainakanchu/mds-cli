@@ -2,7 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createDiscordGuild } from "../../libs/client.mjs"
+import { createDiscordClient } from "../../libs/client.mjs"
 import { createChannel, getChannelFile } from "../../libs/channel.mjs"
 import { createCategory } from "../../libs/category.mjs"
 
@@ -55,12 +55,12 @@ interface Options {
   }
   spinner.success()
 
-  // Discordのギルドを作成する
-  spinner.loading("Create discord guild")
-  const { discordGuild, ...createDiscordGuildResult } =
-    await createDiscordGuild(discordBotToken, discordServerId)
-  if (!discordGuild || createDiscordGuildResult.status === "failed") {
-    spinner.failed(null, createDiscordGuildResult.message)
+  // Discordのクライアントを作成する
+  spinner.loading("Create discord client")
+  const { discordClient, ...createDiscordClientResult } =
+    await createDiscordClient(discordBotToken, discordServerId)
+  if (!discordClient || createDiscordClientResult.status === "failed") {
+    spinner.failed(null, createDiscordClientResult.message)
     process.exit(0)
   }
   spinner.success()
@@ -79,7 +79,7 @@ interface Options {
   // チャンネルのカテゴリーを作成する
   spinner.loading("Create category")
   const { categories, ...createCategoryResult } = await createCategory(
-    discordGuild,
+    discordClient,
     [
       { id: "", name: "CHANNEL" },
       { id: "", name: "ARCHIVE" },
@@ -107,7 +107,7 @@ interface Options {
   // チャンネルを作成する
   spinner.loading("Create channel")
   const createChannelResult = await createChannel(
-    discordGuild,
+    discordClient,
     channels,
     distChannelFilePath,
     defaultCategory,

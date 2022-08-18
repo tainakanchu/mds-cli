@@ -2,7 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createDiscordGuild } from "../../libs/client.mjs"
+import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import { deleteAllMessage } from "../../libs/message.mjs"
 
@@ -44,12 +44,12 @@ interface Options {
   }
   spinner.success()
 
-  // Discordのギルドを作成する
-  spinner.loading("Create discord guild")
-  const { discordGuild, ...createDiscordGuildResult } =
-    await createDiscordGuild(discordBotToken, discordServerId)
-  if (!discordGuild || createDiscordGuildResult.status === "failed") {
-    spinner.failed(null, createDiscordGuildResult.message)
+  // Discordのクライアントを作成する
+  spinner.loading("Create discord client")
+  const { discordClient, ...createDiscordClientResult } =
+    await createDiscordClient(discordBotToken, discordServerId)
+  if (!discordClient || createDiscordClientResult.status === "failed") {
+    spinner.failed(null, createDiscordClientResult.message)
     process.exit(0)
   }
   spinner.success()
@@ -67,7 +67,7 @@ interface Options {
 
   // メッセージを削除する
   spinner.loading("Delete message")
-  const deleteAllMessageResult = await deleteAllMessage(discordGuild, channels)
+  const deleteAllMessageResult = await deleteAllMessage(discordClient, channels)
   if (deleteAllMessageResult.status === "failed") {
     spinner.failed(null, deleteAllMessageResult.message)
     process.exit(0)

@@ -2,7 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createDiscordGuild } from "../../libs/client.mjs"
+import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import { createAllMessage } from "../../libs/message.mjs"
 
@@ -44,12 +44,12 @@ interface Options {
   }
   spinner.success()
 
-  // Discordのギルドを作成する
-  spinner.loading("Create discord guild")
-  const { discordGuild, ...createDiscordGuildResult } =
-    await createDiscordGuild(discordBotToken, discordServerId)
-  if (!discordGuild || createDiscordGuildResult.status === "failed") {
-    spinner.failed(null, createDiscordGuildResult.message)
+  // Discordのクライアントを作成する
+  spinner.loading("Create discord client")
+  const { discordClient, ...createDiscordClientResult } =
+    await createDiscordClient(discordBotToken, discordServerId)
+  if (!discordClient || createDiscordClientResult.status === "failed") {
+    spinner.failed(null, createDiscordClientResult.message)
     process.exit(0)
   }
   spinner.success()
@@ -67,12 +67,18 @@ interface Options {
 
   // メッセージを作成する
   spinner.loading("Create message")
-  const createAllMessageResult = await createAllMessage(discordGuild, channels)
+  const createAllMessageResult = await createAllMessage(discordClient, channels)
   if (createAllMessageResult.status === "failed") {
     spinner.failed(null, createAllMessageResult.message)
     process.exit(0)
   }
   spinner.success()
+  // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
+  if (createAllMessageResult.isMaxFileSizeOver) {
+    spinner.warning(
+      "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
+    )
+  }
 
   process.exit(0)
 })()

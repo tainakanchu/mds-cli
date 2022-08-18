@@ -2,7 +2,7 @@ import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType } from "discord.js"
-import type { Guild } from "discord.js"
+import type { Guild as DiscordClientType } from "discord.js"
 import type { Category } from "./category.mjs"
 import { getMessageFilePaths } from "./message.mjs"
 
@@ -10,15 +10,20 @@ export interface Channel {
   slack: {
     channel_id: string
     channel_name: string
-    archived: boolean
+    is_archived: boolean
     purpose: string
     message_file_paths: string[]
   }
   discord: {
     channel_id: string
     channel_name: string
-    archived: boolean
-    deleted: boolean
+    is_archived: boolean
+    is_deleted: boolean
+    guild: {
+      boost_level: 0 | 1 | 2 | 3
+      boost_count: number
+      max_file_size: 8000000 | 50000000 | 100000000
+    }
     topic: string
     message_file_paths: string[]
   }
@@ -110,15 +115,20 @@ export const buildChannelFile = async (
           slack: {
             channel_id: channel.id || "",
             channel_name: channel.name || "",
-            archived: channel.is_archived || false,
+            is_archived: channel.is_archived || false,
             purpose: channel.purpose?.value ? channel.purpose.value : "",
             message_file_paths: srcMessageFilePaths,
           },
           discord: {
             channel_id: "",
             channel_name: channel.name || "",
-            archived: channel.is_archived || false,
-            deleted: false,
+            is_archived: channel.is_archived || false,
+            is_deleted: false,
+            guild: {
+              boost_level: 0,
+              boost_count: 0,
+              max_file_size: 8000000,
+            },
             topic: channel.purpose?.value ? channel.purpose.value : "",
             message_file_paths: distMessageFilePaths,
           },
@@ -145,7 +155,7 @@ export const buildChannelFile = async (
 
 /**
  * Create channel
- * @param discordGuild
+ * @param discordClient
  * @param channels
  * @param distChannelFilePath
  * @param defaultCategory
@@ -153,7 +163,7 @@ export const buildChannelFile = async (
  * @param migrateArchive
  */
 export const createChannel = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string,
   defaultCategory: Category,
@@ -168,22 +178,43 @@ export const createChannel = async (
     // チャンネルを作成する
     const newChannels: Channel[] = []
     for (const channel of channels) {
-      if (!channel.discord.archived || migrateArchive) {
-        const result = await discordGuild.channels.create({
+      if (!channel.discord.is_archived || migrateArchive) {
+        const result = await discordClient.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           topic: channel.discord.topic ? channel.discord.topic : undefined,
-          parent: channel.discord.archived
+          parent: channel.discord.is_archived
             ? archiveCategory.id
             : defaultCategory.id,
         })
-        // チャンネルのIDを更新する
-        channel.discord.channel_id = result.id
-        newChannels.push(channel)
+
+        // サーバーブーストレベルとファイルサイズを算出する
+        const boostCount = result.guild.premiumSubscriptionCount || 0
+        let boostLevel: Channel["discord"]["guild"]["boost_level"] = 0
+        if (boostCount >= 2 && boostCount < 7) {
+          boostLevel = 1
+        } else if (boostCount >= 7 && boostCount < 14) {
+          boostLevel = 2
+        } else if (boostCount >= 14) {
+          boostLevel = 3
+        }
+        let maxFileSize: Channel["discord"]["guild"]["max_file_size"] = 8000000
+        if (boostLevel === 2) {
+          maxFileSize = 50000000
+        } else if (boostLevel === 3) {
+          maxFileSize = 100000000
+        }
+
+        const newChannel = { ...channel }
+        newChannel.discord.channel_id = result.id
+        newChannel.discord.guild.boost_level = boostLevel
+        newChannel.discord.guild.boost_count = boostCount
+        newChannel.discord.guild.max_file_size = maxFileSize
+        newChannels.push(newChannel)
       }
     }
 
-    // チャンネルファイルを作成する
+    // チャンネルファイルを更新する
     const createChannelFileResult = await createChannelFile(
       distChannelFilePath,
       newChannels
@@ -204,12 +235,12 @@ export const createChannel = async (
 
 /**
  * Delete channel
- * @param discordGuild
+ * @param discordClient
  * @param channels
  * @param distChannelFilePath
  */
 export const deleteChannel = async (
-  discordGuild: Guild,
+  discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string
 ): Promise<{
@@ -221,8 +252,8 @@ export const deleteChannel = async (
     // チャンネルを削除する
     const newChannels: Channel[] = []
     for (const channel of channels) {
-      await discordGuild.channels.delete(channel.discord.channel_id)
-      channel.discord.deleted = true
+      await discordClient.channels.delete(channel.discord.channel_id)
+      channel.discord.is_deleted = true
       newChannels.push(channel)
     }
 
