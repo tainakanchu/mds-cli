@@ -14,7 +14,7 @@
 
 1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考に任意の名前のBotを作成
 2. Public Botのチェックを外し、DiscordBotを公開にしておく
-3. OAuth2 > URL GeneratorでSCOPESの項目では「Bot」を、Bot Permissionsの項目では「Send Messages」と「Manage Channels」にチェックを入れる
+3. OAuth2 > URL GeneratorでSCOPESの項目では「Bot」を、Bot Permissionsの項目では「Send Messages」、「Manage Channels」、「Manage Messages」にチェックを入れる
 4. GENERATED URLの項目で生成されたURLを開いて、移行先のDiscordサーバーにDiscordBotを追加する
 5. Bot > Build A Botの項目からDiscordBotのトークンを控えておく
 6. Discordのアプリで、DiscordのサーバーIDを表示させるために、Discordのアプリの設定 > 詳細設定で開発者モードを有効化にする

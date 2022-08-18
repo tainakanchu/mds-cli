@@ -435,56 +435,30 @@ export const createAllMessage = async (
 export const deleteMessage = async (
   discordClient: DiscordClientType,
   messages: Message[],
-  channelId: string,
-  distMessageFilePath: string
+  channelId: string
 ): Promise<{
-  messages: Message[]
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     // メッセージを削除
     const channelGuild = discordClient.channels.cache.get(channelId)
-    const newMessages: Message[] = []
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
         if (message.message_id) {
-          const result = await channelGuild.messages.cache
-            .get(message.message_id)
-            ?.delete()
-          newMessages.push({
-            ...message,
-            ...{
-              timestamp: result?.editedTimestamp
-                ? result?.editedTimestamp
-                : undefined,
-              anthor: {
-                id: result?.author.id || "",
-                name: result?.author.username || "",
-                type: "bot",
-              },
-            },
-          })
+          await channelGuild.messages.delete(message.message_id)
         }
       }
     }
 
-    // メッセージファイルを更新
-    const createMessageFileResult = await createMessageFile(
-      distMessageFilePath,
-      newMessages
-    )
-    if (createMessageFileResult.status === "failed") {
-      return {
-        messages: [],
-        status: "failed",
-        message: createMessageFileResult.message,
-      }
+    return {
+      status: "success",
     }
-
-    return { messages: newMessages, status: "success" }
   } catch (error) {
-    return { messages: [], status: "failed", message: error }
+    return {
+      status: "failed",
+      message: error,
+    }
   }
 }
 
@@ -510,8 +484,7 @@ export const deleteAllMessage = async (
             const deleteMessageResult = await deleteMessage(
               discordClient,
               getMessageFileResult.messages,
-              channel.discord.channel_id,
-              messageFilePath
+              channel.discord.channel_id
             )
             if (deleteMessageResult.status === "failed") {
               throw new Error(deleteMessageResult.message)
