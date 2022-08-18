@@ -20,15 +20,8 @@ export interface Message {
   channel_id?: string
   guild_id?: string
   content: string
-  // embeds: Embed[]
-  files?: {
-    id: string
-    file_type: string
-    name: string
-    size: number
-    url: string
-    download_url: string
-  }[]
+  embeds: Embed[]
+  files?: string[]
   anthor?: {
     id: string
     name: string
@@ -146,8 +139,16 @@ export const buildMessageFile = async (
       // メッセージ内の引用タグを、Discordで表示される形式に置換
       if (/&gt; /.test(content)) content = content.replaceAll("&gt; ", "> ")
 
+      // 埋め込みフィールドを作成
+      const fields: Embed["fields"] = [
+        {
+          name: "------------------------------------------------",
+          value: content,
+        },
+      ]
+
       // 添付ファイルを取得
-      const files: Message["files"] = message.files?.map((file) => {
+      const files = message.files?.map((file) => {
         if (file.size && file.size > maxFileSize && !isMaxFileSizeOver) {
           isMaxFileSizeOver = true
         }
@@ -161,38 +162,62 @@ export const buildMessageFile = async (
         }
       })
 
+      // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
+      const sizeOverFileUrlsFields = files
+        ?.filter((file) => file.size >= maxFileSize)
+        .map((file) => ({ name: file.name, value: file.url }))
+      if (sizeOverFileUrlsFields) {
+        fields.push(...sizeOverFileUrlsFields)
+      }
+      const uploadFileUrls = files
+        ?.filter((file) => file.size < maxFileSize)
+        .map((file) => file.url)
+
       // メッセージの送信者情報を取得
-      const slackAnthor = users.find(
+      const user = users.find(
         (user) =>
           user.slack.id === message.user || user.slack.id === message.bot_id
       )
-      if (!slackAnthor) {
-        throw new Error("Failed to get anthor for message")
+      if (!user) {
+        throw new Error("Failed to get user for message")
+      }
+      const anthor: Message["slack"]["anthor"] = {
+        id: user.slack.id,
+        name: user.slack.name,
+        type: message.bot_id
+          ? "bot"
+          : user.slack.deleted
+          ? "cancel-user"
+          : "active-user",
+        color: user.slack.color,
+        type_icon: message.bot_id ? "🤖" : user.slack.deleted ? "🔵" : "🟢",
+        image_url: user.slack.image_url,
       }
 
       // 小数点以下のタイムスタンプを切り捨て
       const timestamp = Math.floor(Number(message.ts))
 
+      // メッセージの投稿日時を算出
+      const postTime = format(fromUnixTime(timestamp), " HH:mm")
+      const isoPostDatetime = formatISO(fromUnixTime(timestamp))
+
       newMessages.push({
         content: content,
-        files: files,
-        slack: {
-          anthor: {
-            id: slackAnthor.slack.id,
-            name: slackAnthor.slack.name,
-            type: message.bot_id
-              ? "bot"
-              : slackAnthor.slack.deleted
-              ? "cancel-user"
-              : "active-user",
-            color: slackAnthor.slack.color,
-            type_icon: message.bot_id
-              ? "🤖"
-              : slackAnthor.slack.deleted
-              ? "🔵"
-              : "🟢",
-            image_url: slackAnthor.slack.image_url,
+        embeds: [
+          {
+            type: EmbedType.Rich,
+            color: parseInt(anthor.color, 16),
+            fields: fields,
+            timestamp: isoPostDatetime,
+            author: {
+              name: `${anthor.type_icon} ${anthor.name}    ${postTime}`,
+              icon_url: anthor.image_url,
+            },
           },
+        ],
+        files: uploadFileUrls,
+        slack: {
+          anthor: anthor,
           timestamp: timestamp,
         },
       })
@@ -292,7 +317,6 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
  *  Create message
  * @param discordClient
  * @param channelId
- * @param maxFileSize
  * @param distMessageFilePath
  * @param messages
  */
@@ -300,7 +324,6 @@ export const createMessage = async (
   discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
-  maxFileSize: number,
   distMessageFilePath: string
 ): Promise<{
   messages: Message[]
@@ -315,48 +338,10 @@ export const createMessage = async (
     let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        const fields: Embed["fields"] = [
-          {
-            name: "",
-            value: message.content,
-          },
-        ]
-
-        // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
-        const sizeOverFileUrlsFields = message.files
-          ?.filter((file) => file.size >= maxFileSize)
-          .map((file) => ({ name: "", value: file.url }))
-        if (sizeOverFileUrlsFields) {
-          fields.push(...sizeOverFileUrlsFields)
-        }
-        const uploadFileUrls = message.files
-          ?.filter((file) => file.size < maxFileSize)
-          .map((file) => file.url)
-
-        // メッセージの投稿日時を算出
-        const postTime = format(fromUnixTime(message.slack.timestamp), " HH:mm")
-        const isoPostDatetime = formatISO(fromUnixTime(message.slack.timestamp))
-
         const result = await channelGuild.send({
           content: "",
-          files: uploadFileUrls,
-          embeds: [
-            {
-              type: EmbedType.Rich,
-              color: parseInt(message.slack.anthor.color, 16),
-              fields: [
-                {
-                  name: "------------------------------------------------",
-                  value: message.content,
-                },
-              ],
-              timestamp: isoPostDatetime,
-              author: {
-                name: `${message.slack.anthor.type_icon} ${message.slack.anthor.name}    ${postTime}`,
-                icon_url: message.slack.anthor.image_url,
-              },
-            },
-          ],
+          files: message.files,
+          embeds: message.embeds,
         })
 
         newMessages.push({
@@ -424,7 +409,6 @@ export const createAllMessage = async (
               discordClient,
               getMessageFileResult.messages,
               channel.discord.channel_id,
-              channel.discord.guild.max_file_size,
               messageFilePath
             )
             if (createMessageResult.status === "failed") {
