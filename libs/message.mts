@@ -399,26 +399,24 @@ export const createAllMessage = async (
     let isMaxFileSizeOver = false
     await Promise.all(
       channels.map(async (channel) => {
-        await Promise.all(
-          channel.discord.message_file_paths.map(async (messageFilePath) => {
-            const getMessageFileResult = await getMessageFile(messageFilePath)
-            if (getMessageFileResult.status === "failed") {
-              throw new Error(getMessageFileResult.message)
-            }
-            const createMessageResult = await createMessage(
-              discordClient,
-              getMessageFileResult.messages,
-              channel.discord.channel_id,
-              messageFilePath
-            )
-            if (createMessageResult.status === "failed") {
-              throw new Error(createMessageResult.message)
-            }
-            if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
-              isMaxFileSizeOver = true
-            }
-          })
-        )
+        for (const messageFilePath of channel.discord.message_file_paths) {
+          const getMessageFileResult = await getMessageFile(messageFilePath)
+          if (getMessageFileResult.status === "failed") {
+            throw new Error(getMessageFileResult.message)
+          }
+          const createMessageResult = await createMessage(
+            discordClient,
+            getMessageFileResult.messages,
+            channel.discord.channel_id,
+            messageFilePath
+          )
+          if (createMessageResult.status === "failed") {
+            throw new Error(createMessageResult.message)
+          }
+          if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
+            isMaxFileSizeOver = true
+          }
+        }
       })
     )
     return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
