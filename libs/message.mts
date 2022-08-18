@@ -151,7 +151,8 @@ export const buildMessageFile = async (
       // メッセージの送信者情報を取得
       const user = users.find(
         (user) =>
-          user.slack.id === message.user || user.slack.id === message.bot_id
+          user.slack.id === message.user ||
+          user.slack.bot?.app_id === message.app_id
       )
       if (!user) {
         throw new Error("Failed to get user for message")
