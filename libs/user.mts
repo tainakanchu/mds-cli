@@ -10,6 +10,7 @@ export interface User {
     deleted: boolean
     is_bot: boolean
     color: string | "808080"
+    icon_url: string
   }
   discord: {
     id: string
@@ -72,6 +73,7 @@ export const buildUser = async (
             deleted: user.deleted || false,
             is_bot: user.is_bot || false,
             color: user.color || "808080",
+            icon_url: user.profile?.image_512 || "",
           },
           discord: {
             id: "",
