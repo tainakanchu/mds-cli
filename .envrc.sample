@@ -3,4 +3,3 @@ export SLACK_BOT_TOKEN="" # SlackBot OAuth Token
 export DISCORD_BOT_TOKEN="" # DiscordBot OAuth Token
 export DISCORD_SERVER_ID="" # DiscordBot OAuth Token
 export MIGRATE_ARCHIVE="true" # Whether to migrate archive channel
-export SHOW_CUT_LINE="true" # Whether to show cut line between message

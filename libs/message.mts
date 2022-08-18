@@ -1,13 +1,13 @@
 import { access, readFile, readdir, mkdir, writeFile } from "node:fs/promises"
 import { statSync, constants } from "node:fs"
 import { dirname, join } from "node:path"
-import { fromUnixTime, format } from "date-fns"
+import { format, formatISO, fromUnixTime } from "date-fns"
 import {
   Message as SlackBaseMessage,
   FileElement,
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { ChannelType } from "discord.js"
-import type { Guild as DiscordClientType } from "discord.js"
+import { ChannelType, EmbedType } from "discord.js"
+import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
 
@@ -20,7 +20,7 @@ export interface Message {
   channel_id?: string
   guild_id?: string
   content: string
-  is_show_cut_line: boolean
+  // embeds: Embed[]
   files?: {
     id: string
     file_type: string
@@ -40,11 +40,11 @@ export interface Message {
       id: string
       name: string
       type: "bot" | "active-user" | "cancel-user"
+      type_icon: "🟢" | "🔵" | "🤖"
+      image_url: string
       color: string | "808080"
-      icon: "🤖" | "🥶" | "😃"
     }
-    timestamp?: number | 1375282800
-    post_datetime: string
+    timestamp: number | 1375282800
   }
 }
 
@@ -98,14 +98,12 @@ export const createMessageFile = async (
  * @param srcMessageFilePath
  * @param distMessageFilePath
  * @param users
- * @param showCutLine
  */
 export const buildMessageFile = async (
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
-  maxFileSize: number,
-  showCutLine: boolean
+  maxFileSize: number
 ): Promise<{
   messages: Message[]
   isMaxFileSizeOver?: boolean
@@ -168,34 +166,34 @@ export const buildMessageFile = async (
         (user) =>
           user.slack.id === message.user || user.slack.id === message.bot_id
       )
+      if (!slackAnthor) {
+        throw new Error("Failed to get anthor for message")
+      }
+
+      // 小数点以下のタイムスタンプを切り捨て
+      const timestamp = Math.floor(Number(message.ts))
 
       newMessages.push({
         content: content,
         files: files,
-        is_show_cut_line: showCutLine,
         slack: {
           anthor: {
-            id: slackAnthor?.slack.id || "",
-            name: slackAnthor?.slack.name || "NoName",
+            id: slackAnthor.slack.id,
+            name: slackAnthor.slack.name,
             type: message.bot_id
               ? "bot"
-              : slackAnthor?.slack.deleted
+              : slackAnthor.slack.deleted
               ? "cancel-user"
               : "active-user",
-            color: slackAnthor?.slack.color || "808080",
-            icon: message.bot_id
+            color: slackAnthor.slack.color,
+            type_icon: message.bot_id
               ? "🤖"
-              : slackAnthor?.slack.deleted
-              ? "🥶"
-              : "😃",
+              : slackAnthor.slack.deleted
+              ? "🔵"
+              : "🟢",
+            image_url: slackAnthor.slack.image_url,
           },
-          timestamp: Math.floor(Number(message.ts || 1375282800)),
-          post_datetime: message.ts
-            ? format(
-                fromUnixTime(Number(message.ts || 1375282800)),
-                "yyyy/MM/dd HH:mm"
-              )
-            : "",
+          timestamp: timestamp,
         },
       })
     }
@@ -226,12 +224,10 @@ export const buildMessageFile = async (
  * Build all message file
  * @param channels
  * @param users
- * @param showCutLine
  */
 export const buildAllMessageFile = async (
   channels: Channel[],
-  users: User[],
-  showCutLine: boolean
+  users: User[]
 ): Promise<{
   isMaxFileSizeOver?: boolean
   status: "success" | "failed"
@@ -251,8 +247,7 @@ export const buildAllMessageFile = async (
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
-                  channel.discord.guild.max_file_size,
-                  showCutLine
+                  channel.discord.guild.max_file_size
                 )
                 if (
                   buildMessageFileResult.isMaxFileSizeOver &&
@@ -320,38 +315,48 @@ export const createMessage = async (
     let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        let content = ""
-
-        // メッセージに切り取り線を追加(チャットの区切りが見やすいように)
-        if (message.is_show_cut_line) {
-          content += "------------------------------------------------\n"
-        }
-
-        // メッセージに絵文字アイコン、ユーザー名、投稿日時を追加
-        const slackAnthor = message.slack?.anthor
-        if (slackAnthor) {
-          content += `${slackAnthor.icon}  **${slackAnthor.name}**  ${message.slack?.post_datetime}\n`
-        }
-
-        content += message.content
+        const fields: Embed["fields"] = [
+          {
+            name: "",
+            value: message.content,
+          },
+        ]
 
         // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
-        const sizeOverFileUrls = message.files?.filter(
-          (file) => file.size > maxFileSize
-        )
+        const sizeOverFileUrlsFields = message.files
+          ?.filter((file) => file.size >= maxFileSize)
+          .map((file) => ({ name: "", value: file.url }))
+        if (sizeOverFileUrlsFields) {
+          fields.push(...sizeOverFileUrlsFields)
+        }
         const uploadFileUrls = message.files
           ?.filter((file) => file.size < maxFileSize)
           .map((file) => file.url)
-        if (sizeOverFileUrls) {
-          isMaxFileSizeOver = true
-          for (const file of sizeOverFileUrls) {
-            content += `\n${file.url}`
-          }
-        }
+
+        // メッセージの投稿日時を算出
+        const postTime = format(fromUnixTime(message.slack.timestamp), " HH:mm")
+        const isoPostDatetime = formatISO(fromUnixTime(message.slack.timestamp))
 
         const result = await channelGuild.send({
-          content: content,
+          content: "",
           files: uploadFileUrls,
+          embeds: [
+            {
+              type: EmbedType.Rich,
+              color: parseInt(message.slack.anthor.color, 16),
+              fields: [
+                {
+                  name: "------------------------------------------------",
+                  value: message.content,
+                },
+              ],
+              timestamp: isoPostDatetime,
+              author: {
+                name: `${message.slack.anthor.type_icon} ${message.slack.anthor.name}    ${postTime}`,
+                icon_url: message.slack.anthor.image_url,
+              },
+            },
+          ],
         })
 
         newMessages.push({

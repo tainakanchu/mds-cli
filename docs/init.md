@@ -48,7 +48,6 @@ export SLACK_BOT_TOKEN="" # SlackBotのトークン
 export DISCORD_BOT_TOKEN="" # DiscordBotのトークン
 export DISCORD_SERVER_ID="" # DiscordのサーバーID
 export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
-export SHOW_CUT_LINE="true" # メッセージの間に切り取り線を表示するかどうか
 ```
 
 下記のコマンドで、変更した環境変数の値を反映する  
