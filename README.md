@@ -2,7 +2,7 @@
 
 <img src="./docs//img/msd.png" style="margin-left:auto; margin-right:auto; width:200px; display:block;">
 
-SlackからDiscordにチャンネルのメッセージを移行するためのnode.js製のCLI  
+SlackからDiscordに移行するためのnode.js製のCLI  
 MSDは(Migrate from Slack to Discord)の略称  
 
 > **Warning**  

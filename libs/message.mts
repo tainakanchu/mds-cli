@@ -19,15 +19,15 @@ export interface Message {
   message_id?: string
   channel_id?: string
   guild_id?: string
-  content: string
-  embeds: Embed[]
+  content?: string
+  embeds?: Embed[]
   files?: string[]
   anthor?: {
     id: string
     name: string
     type: "bot"
   }
-  timestamp?: number | 1431442800
+  timestamp?: number
   slack: {
     anthor: {
       id: string
@@ -37,7 +37,7 @@ export interface Message {
       image_url: string
       color: string | "808080"
     }
-    timestamp: number | 1375282800
+    timestamp: number
   }
 }
 
@@ -124,20 +124,21 @@ export const buildMessageFile = async (
         }
       }
 
-      // メッセージ内のURLを、Discordで表示される形式に置換
-      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
-
       // メッセージ内の太文字を、Discordで表示される形式に置換
-      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+      if (/\*.*\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
 
       // メッセージ内の斜体文字を、Discordで表示される形式に置換
-      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
+      // if (/\_.*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
 
       // メッセージ内の打ち消し線を、Discordで表示される形式に置換
-      if (/~*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
+      if (/~.*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
 
       // メッセージ内の引用タグを、Discordで表示される形式に置換
-      if (/&gt; /.test(content)) content = content.replaceAll("&gt; ", "> ")
+      if (/&gt; .*/.test(content)) content = content.replaceAll(/&gt; /g, "> ")
+
+      // メッセージ内のURLタグを、Discordで表示される形式に置換
+      if (/<http|https:\/\/.*\|.*>/.test(content))
+        content = content.replaceAll(/<|\|.*>/g, "")
 
       // 埋め込みフィールドを作成
       const fields: Embed["fields"] = [
@@ -146,32 +147,6 @@ export const buildMessageFile = async (
           value: content,
         },
       ]
-
-      // 添付ファイルを取得
-      const files = message.files?.map((file) => {
-        if (file.size && file.size > maxFileSize && !isMaxFileSizeOver) {
-          isMaxFileSizeOver = true
-        }
-        return {
-          id: file.id || "",
-          file_type: file.filetype || "",
-          name: file.name || "",
-          size: file.size || 0,
-          url: file.url_private || "",
-          download_url: file.url_private_download || "",
-        }
-      })
-
-      // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
-      const sizeOverFileUrlsFields = files
-        ?.filter((file) => file.size >= maxFileSize)
-        .map((file) => ({ name: file.name, value: file.url }))
-      if (sizeOverFileUrlsFields) {
-        fields.push(...sizeOverFileUrlsFields)
-      }
-      const uploadFileUrls = files
-        ?.filter((file) => file.size < maxFileSize)
-        .map((file) => file.url)
 
       // メッセージの送信者情報を取得
       const user = users.find(
@@ -215,14 +190,33 @@ export const buildMessageFile = async (
             },
           },
         ],
-        files: uploadFileUrls,
         slack: {
           anthor: anthor,
           timestamp: timestamp,
         },
       })
+
+      // Discordにアップロードできる最大ファイルサイズを超過したファイルは、ファイルをアップロードせず、ファイルURLを添付する
+      const sizeOverFileUrls = message.files
+        ?.filter((file) => file.size && file.size >= maxFileSize)
+        .map((file) => file.url_private || "")
+      const uploadFileUrls = message.files
+        ?.filter((file) => file.size && file.size < maxFileSize)
+        .map((file) => file.url_private || "")
+      if (sizeOverFileUrls || uploadFileUrls) {
+        // 埋め込みの下に添付ファイルが表示されるように、添付ファイルは別メッセージにする
+        newMessages.push({
+          content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
+          files: uploadFileUrls?.length ? uploadFileUrls : undefined,
+          slack: {
+            anthor: anthor,
+            timestamp: timestamp,
+          },
+        })
+      }
     }
 
+    // メッセージファイルを作成
     const createMessageFileResult = await createMessageFile(
       distMessageFilePath,
       newMessages
@@ -339,7 +333,7 @@ export const createMessage = async (
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
         const result = await channelGuild.send({
-          content: "",
+          content: message.embeds ? undefined : message.content,
           files: message.files,
           embeds: message.embeds,
         })
