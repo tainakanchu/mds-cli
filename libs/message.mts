@@ -124,20 +124,21 @@ export const buildMessageFile = async (
         }
       }
 
-      // メッセージ内のURLを、Discordで表示される形式に置換
-      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
-
       // メッセージ内の太文字を、Discordで表示される形式に置換
-      if (/\**\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
+      if (/\*.*\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
 
       // メッセージ内の斜体文字を、Discordで表示される形式に置換
-      // if (/\_*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
+      // if (/\_.*\_/.test(content)) content = content.replaceAll(/\_*\_/g, "_")
 
       // メッセージ内の打ち消し線を、Discordで表示される形式に置換
-      if (/~*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
+      if (/~.*~/.test(content)) content = content.replaceAll(/~*~/g, "~~")
 
       // メッセージ内の引用タグを、Discordで表示される形式に置換
-      if (/&gt; /.test(content)) content = content.replaceAll("&gt; ", "> ")
+      if (/&gt; .*/.test(content)) content = content.replaceAll(/&gt; /g, "> ")
+
+      // メッセージ内のURLタグを、Discordで表示される形式に置換
+      if (/<http|https:\/\/.*\|.*>/.test(content))
+        content = content.replaceAll(/<|\|.*>/g, "")
 
       // 埋め込みフィールドを作成
       const fields: Embed["fields"] = [
