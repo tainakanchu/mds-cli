@@ -1,6 +1,6 @@
 import { access, mkdir, writeFile, constants, readFile } from "node:fs/promises"
 import { dirname } from "node:path"
-import { ChannelType } from "discord.js"
+import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType } from "discord.js"
 
 export interface Category {
@@ -70,17 +70,18 @@ export const createCategory = async (
 }> => {
   try {
     // カテゴリーを作成する
-    const newCategories: Category[] = []
-    for (const category of categories) {
-      const rusult = await discordClient.channels.create({
-        name: category.name,
-        type: ChannelType.GuildCategory,
+    const newCategories = await Promise.all(
+      categories.map(async (category) => {
+        const rusult = await discordClient.channels.create({
+          name: category.name,
+          type: ChannelType.GuildCategory,
+        })
+        return {
+          id: rusult?.id ? rusult.id : "",
+          name: category.name,
+        } as Category
       })
-      newCategories.push({
-        id: rusult?.id ? rusult.id : "",
-        name: category.name,
-      })
-    }
+    )
 
     // カテゴリーファイルを作成する
     const createCategoryFileResult = await createCategoryFile(
@@ -105,42 +106,32 @@ export const createCategory = async (
  * Delete category
  * @param discordClient
  * @param categories
- * @param distCategoryFilePath
  */
 export const deleteCategory = async (
   discordClient: DiscordClientType,
-  categories: Category[],
-  distCategoryFilePath: string
-): Promise<{
   categories: Category[]
+): Promise<{
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     // カテゴリーを削除する
-    const newCategories: Category[] = []
-    for (const category of categories) {
-      if (category.id) {
-        await discordClient.channels.delete(category.id)
-      }
-      newCategories.push(category)
-    }
+    await Promise.all(
+      categories.map(async (category) => {
+        try {
+          await discordClient.channels.delete(category.id)
+        } catch (error) {
+          if (error instanceof DiscordAPIError && error.code == 10003) {
+            // 削除対象のカテゴリーが存在しないエラーの場合は、何もしない
+          } else {
+            throw error
+          }
+        }
+      })
+    )
 
-    // カテゴリーファイルを更新する
-    // const createCategoryFileResult = await createCategoryFile(
-    //   distCategoryFilePath,
-    //   newCategories
-    // )
-    // if (createCategoryFileResult.status === "failed") {
-    //   return {
-    //     categories: [],
-    //     status: "failed",
-    //     message: createCategoryFileResult.message,
-    //   }
-    // }
-
-    return { categories: newCategories, status: "success" }
+    return { status: "success" }
   } catch (error) {
-    return { categories: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }

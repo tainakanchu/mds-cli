@@ -7,7 +7,7 @@ import { Spinner } from "../libs/util/spinner.mjs"
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../.dist/")
 
-dotenv.config({ path: "./.envrc" })
+dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
 
 ;(async () => {

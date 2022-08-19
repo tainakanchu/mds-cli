@@ -2,13 +2,12 @@
 
 **移行元のSlackのワークスペース、移行先のDiscordのサーバーがある**前提で、下記の初回設定を順次行ってください  
 
-1. [direnvのインストール](https://github.com/direnv/direnv)
-2. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
-3. [DiscordBotの作成](#create-discord-bot)
-4. [SlackBotの作成](#create-slack-bot)
-5. [Slackのデータのエクスポート](#export-slack-data)
-6. [環境変数の設定](#setting-environment-variables)
-7. [実行環境の設定](#setting-execution-environment)
+1. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
+2. [DiscordBotの作成](#create-discord-bot)
+3. [SlackBotの作成](#create-slack-bot)
+4. [Slackのデータのエクスポート](#export-slack-data)
+5. [環境変数の設定](#setting-environment-variables)
+6. [実行環境の設定](#setting-execution-environment)
 
 <h2 id="create-discord-bot">DiscordBotの作成</h2>
 
@@ -37,10 +36,10 @@
 下記のコマンドで、環境変数の設定ファイルを作成する  
 
 ```zsh
-cp .envrc.sample .envrc
+cp .env.sample .env
 ```
 
-`.envrc`ファイルの環境変数の値に、SlackBotのトークン、DiscordBotのトークン、DiscordのサーバーIDなどの情報を設定する  
+`.env`ファイルの環境変数の値に、SlackBotのトークン、DiscordBotのトークン、DiscordのサーバーIDなどの情報を設定する  
 
 ```zsh
 export NODE_OPTIONS=--openssl-legacy-provider # 使用中のライブラリの OpenSSL エラー防止オプション
@@ -50,26 +49,12 @@ export DISCORD_SERVER_ID="" # DiscordのサーバーID
 export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
 ```
 
-下記のコマンドで、変更した環境変数の値を反映する  
-
-```zsh
-direnv allow
-```
-
 <h2 id="setting-execution-environment">実行環境の設定</h2>
 
 下記のコマンドで、VoltaでNode.jsとnpmを設定する  
 
 ```zsh
 volta install node@18.7.0 npm@8.15.1
-
-npm install
-```
-
-必要に応じて下記のコマンドで、パッケージをアップデートする  
-
-```zsh
-npx ncu -u
 
 npm install
 ```

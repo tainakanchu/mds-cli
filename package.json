@@ -11,13 +11,14 @@
     "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
     "build:user": "node --loader ts-node/esm ./command/build/user.mts",
     "build:message": "node --loader ts-node/esm ./command/build/message.mts",
-    "deploy": "run-p \"deploy:*\"",
+    "deploy": "run-s \"deploy:*\"",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
-    "destroy": "run-p \"deploy:*\"",
-    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
+    "destroy": "run-s \"deploy:*\"",
     "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
-    "start": "run-s build deploy"
+    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
+    "start": "run-s build deploy",
+    "update": "npx ncu -u && npm install"
   },
   "volta": {
     "node": "18.7.0",
@@ -27,13 +28,15 @@
     "@discordjs/rest": "^1.0.1",
     "@slack/web-api": "^6.7.2",
     "commander": "^9.4.0",
-    "date-fns": "^2.29.1",
+    "date-fns": "^2.29.2",
     "discord.js": "^14.2.0",
     "dotenv": "^16.0.1",
-    "picocolors": "^1.0.0"
+    "picocolors": "^1.0.0",
+    "prompts": "^2.4.2"
   },
   "devDependencies": {
     "@types/node": "^18.7.6",
+    "@types/prompts": "^2.0.14",
     "npm-check-updates": "^16.0.5",
     "npm-run-all": "^4.1.5",
     "ts-node": "^10.9.1",

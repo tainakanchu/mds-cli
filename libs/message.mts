@@ -6,8 +6,10 @@ import {
   Message as SlackBaseMessage,
   FileElement,
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { ChannelType, EmbedType } from "discord.js"
+import { ChannelType, EmbedType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
+import type { WebClient as SlackClientType } from "@slack/web-api"
+import { getUser, getUsername } from "./user.mjs"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
 
@@ -16,7 +18,8 @@ export interface SlackMessage extends SlackBaseMessage {
 }
 
 export interface Message {
-  message_id?: string
+  id?: string
+  type: "default" | "pin_message"
   channel_id?: string
   guild_id?: string
   content?: string
@@ -28,6 +31,7 @@ export interface Message {
     type: "bot"
   }
   timestamp?: number
+  is_pinned: boolean
   slack: {
     anthor: {
       id: string
@@ -37,7 +41,7 @@ export interface Message {
       image_url: string
       color: string | "808080"
     }
-    timestamp: number
+    timestamp: string
   }
 }
 
@@ -93,12 +97,13 @@ export const createMessageFile = async (
  * @param users
  */
 export const buildMessageFile = async (
+  slackClient: SlackClientType,
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
+  pinIds: string[],
   maxFileSize: number
 ): Promise<{
-  messages: Message[]
   isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
@@ -110,19 +115,42 @@ export const buildMessageFile = async (
     const messages = JSON.parse(messageFile) as SlackMessage[]
     let isMaxFileSizeOver = false
     for (const message of messages) {
-      let content = message.text || ""
+      // メッセージの必須項目がない場合は例外を投げる
+      if (message.text === undefined || message.ts === undefined) {
+        throw new Error("Message is missing a required parameter")
+      }
+
+      let content = message.text
 
       // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
-      if (/<@U[A-Z0-9]{10}>/.test(content)) {
-        for (const user of users) {
-          if (new RegExp(`<@${user.slack.id}>`, "g").test(content)) {
-            content = content.replaceAll(
-              new RegExp(`<@${user.slack.id}>`, "g"),
-              `@${user.discord.name}`
-            )
+      const matchMention = content.match(/<@U[A-Z0-9]{10}>/g)
+      if (matchMention?.length) {
+        const userIds = matchMention.map((mention) =>
+          mention.replace(/<@|>/g, "")
+        )
+        for (const userId of userIds) {
+          const user = users.find((user) => user.slack.id === userId)
+          if (user && user.slack.name) {
+            content = content.replaceAll(`<@${userId}>`, `@${user.slack.name}`)
+          } else {
+            // usersにないメンションは、APIから取得する
+            const getUsernameResult = await getUsername(slackClient, userId)
+            const username = getUsernameResult.username
+            if (username && getUsernameResult.status === "success") {
+              content = content.replaceAll(`<@${userId}>`, `@${username}`)
+            } else {
+              throw new Error(
+                `Failed to convert mention of @${userId} to username\n` +
+                  getUsernameResult.message
+              )
+            }
           }
         }
       }
+
+      // メッセージ内のチャンネルメンションタグを、Discordで表示される形式に置換
+      if (/<!channel>/.test(content))
+        content = content.replaceAll(/<!channel>/g, "@channel")
 
       // メッセージ内の太文字を、Discordで表示される形式に置換
       if (/\*.*\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
@@ -149,34 +177,45 @@ export const buildMessageFile = async (
       ]
 
       // メッセージの送信者情報を取得
-      const user = users.find(
+      let user = users.find(
         (user) =>
-          user.slack.id === message.user || user.slack.id === message.bot_id
+          user.slack.id === message.user ||
+          user.slack.bot?.app_id === message.app_id
       )
+      // メッセージの送信者情報が取得できない場合は、APIから取得
       if (!user) {
-        throw new Error("Failed to get user for message")
+        if (message.user) {
+          const getUserResult = await getUser(slackClient, message.user)
+          if (getUserResult.user) {
+            user = getUserResult.user
+          }
+        }
+        if (!user) {
+          throw new Error("Failed to get user for message")
+        }
       }
       const anthor: Message["slack"]["anthor"] = {
         id: user.slack.id,
         name: user.slack.name,
         type: message.bot_id
           ? "bot"
-          : user.slack.deleted
+          : user.slack.is_deleted
           ? "cancel-user"
           : "active-user",
         color: user.slack.color,
-        type_icon: message.bot_id ? "🤖" : user.slack.deleted ? "🔵" : "🟢",
+        type_icon: message.bot_id ? "🤖" : user.slack.is_deleted ? "🔵" : "🟢",
         image_url: user.slack.image_url,
       }
 
-      // 小数点以下のタイムスタンプを切り捨て
-      const timestamp = Math.floor(Number(message.ts))
-
       // メッセージの投稿日時を算出
-      const postTime = format(fromUnixTime(timestamp), " HH:mm")
-      const isoPostDatetime = formatISO(fromUnixTime(timestamp))
+      const postTime = format(fromUnixTime(Number(message.ts)), " HH:mm")
+      const isoPostDatetime = formatISO(fromUnixTime(Number(message.ts)))
+
+      // メッセージがピン留めアイテムか判別
+      const isPinned = pinIds.includes(message.ts) ? true : false
 
       newMessages.push({
+        type: "default",
         content: content,
         embeds: [
           {
@@ -190,9 +229,10 @@ export const buildMessageFile = async (
             },
           },
         ],
+        is_pinned: isPinned,
         slack: {
           anthor: anthor,
-          timestamp: timestamp,
+          timestamp: message.ts,
         },
       })
 
@@ -206,11 +246,13 @@ export const buildMessageFile = async (
       if (sizeOverFileUrls || uploadFileUrls) {
         // 埋め込みの下に添付ファイルが表示されるように、添付ファイルは別メッセージにする
         newMessages.push({
+          type: "default",
           content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
           files: uploadFileUrls?.length ? uploadFileUrls : undefined,
+          is_pinned: isPinned,
           slack: {
             anthor: anthor,
-            timestamp: timestamp,
+            timestamp: message.ts,
           },
         })
       }
@@ -222,20 +264,12 @@ export const buildMessageFile = async (
       newMessages
     )
     if (createMessageFileResult.status === "failed") {
-      return {
-        messages: [],
-        status: "failed",
-        message: createMessageFileResult.message,
-      }
+      return { status: "failed", message: createMessageFileResult.message }
     }
 
-    return {
-      messages: newMessages,
-      isMaxFileSizeOver: isMaxFileSizeOver,
-      status: "success",
-    }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
-    return { messages: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }
 
@@ -245,6 +279,7 @@ export const buildMessageFile = async (
  * @param users
  */
 export const buildAllMessageFile = async (
+  slackClient: SlackClientType,
   channels: Channel[],
   users: User[]
 ): Promise<{
@@ -263,9 +298,11 @@ export const buildAllMessageFile = async (
                 const distMessageFilePath =
                   channel.discord.message_file_paths[index]
                 const buildMessageFileResult = await buildMessageFile(
+                  slackClient,
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
+                  channel.slack.pin_ids,
                   channel.discord.guild.max_file_size
                 )
                 if (
@@ -308,13 +345,13 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 }
 
 /**
- *  Create message
+ * Deploy message
  * @param discordClient
  * @param channelId
  * @param distMessageFilePath
  * @param messages
  */
-export const createMessage = async (
+export const deployMessage = async (
   discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
@@ -326,30 +363,68 @@ export const createMessage = async (
   message?: any
 }> => {
   try {
-    // メッセージを作成
     const channelGuild = discordClient.channels.cache.get(channelId)
-    const newMessages: Message[] = []
     let isMaxFileSizeOver = false
-    if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-      for (const message of messages) {
-        const result = await channelGuild.send({
-          content: message.embeds ? undefined : message.content,
-          files: message.files,
-          embeds: message.embeds,
-        })
 
+    // チャンネルの必須項目がない場合は例外を投げる
+    if (!channelGuild || channelGuild.type !== ChannelType.GuildText) {
+      throw new Error("Failed to get channel")
+    }
+
+    // 時系列順にメッセージを作成するため、メッセージ作成処理は直列処理で実行
+    const newMessages: Message[] = []
+    for (const message of messages) {
+      const sendMessage = await channelGuild.send({
+        content: message.embeds ? undefined : message.content,
+        files: message.files,
+        embeds: message.embeds,
+      })
+
+      // メッセージの送信結果が取得できない場合は、例外を投げる
+      if (!sendMessage || !sendMessage.guildId) {
+        throw new Error("Failed to get deploy message result")
+      }
+
+      // システムメッセージはメッセージを作成しないように除外する
+      if (message.type !== "default") continue
+
+      newMessages.push({
+        ...message,
+        ...{
+          id: sendMessage.id,
+          channel_id: sendMessage.channelId,
+          guild_id: sendMessage.guildId,
+          timestamp: sendMessage.createdTimestamp,
+          anthor: {
+            id: sendMessage.author.id,
+            name: sendMessage.author.username,
+            type: "bot",
+          },
+        },
+      })
+
+      // ピン留めアイテムの場合は、ピン留めする
+      if (message.is_pinned) {
+        const pinMessage = await sendMessage.pin()
+        if (!pinMessage || !pinMessage.guildId) {
+          throw new Error("Failed to pin message")
+        }
+
+        // ピン留めアイテムの追加メッセージを追加
         newMessages.push({
           ...message,
           ...{
-            message_id: result.id || "",
-            channel_id: result.channelId || "",
-            guild_id: result.guildId || "",
-            timestamp: result.createdTimestamp,
+            id: pinMessage.id,
+            types: "pin_message",
+            channel_id: pinMessage.channelId,
+            guild_id: pinMessage.guildId,
+            timestamp: pinMessage.createdTimestamp,
             anthor: {
-              id: result.author.id,
-              name: result.author.username,
+              id: pinMessage.author.id,
+              name: pinMessage.author.username,
               type: "bot",
             },
+            is_pinned: false,
           },
         })
       }
@@ -379,9 +454,9 @@ export const createMessage = async (
 }
 
 /**
- * Create all message
+ * Deploy all message
  */
-export const createAllMessage = async (
+export const deployAllMessage = async (
   discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
@@ -398,16 +473,16 @@ export const createAllMessage = async (
           if (getMessageFileResult.status === "failed") {
             throw new Error(getMessageFileResult.message)
           }
-          const createMessageResult = await createMessage(
+          const deployMessageResult = await deployMessage(
             discordClient,
             getMessageFileResult.messages,
             channel.discord.channel_id,
             messageFilePath
           )
-          if (createMessageResult.status === "failed") {
-            throw new Error(createMessageResult.message)
+          if (deployMessageResult.status === "failed") {
+            throw new Error(deployMessageResult.message)
           }
-          if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
+          if (deployMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
             isMaxFileSizeOver = true
           }
         }
@@ -423,7 +498,6 @@ export const createAllMessage = async (
  *  Delete message
  * @param discordClient
  * @param channelId
- * @param distMessageFilePath
  * @param messages
  */
 export const deleteMessage = async (
@@ -438,11 +512,27 @@ export const deleteMessage = async (
     // メッセージを削除
     const channelGuild = discordClient.channels.cache.get(channelId)
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-      for (const message of messages) {
-        if (message.message_id) {
-          await channelGuild.messages.delete(message.message_id)
-        }
-      }
+      await Promise.all(
+        messages.map(async (message) => {
+          // メッセージの必須項目がない場合は例外を投げる
+          if (message.id === undefined)
+            throw new Error("Message is missing a required parameter")
+
+          try {
+            // ピン留めアイテムの場合は、ピン留めを解除する
+            if (message.is_pinned) {
+              await channelGuild.messages.unpin(message.id)
+            }
+            await channelGuild.messages.delete(message.id)
+          } catch (error) {
+            if (error instanceof DiscordAPIError && error.code === 10008) {
+              // 削除対象のメッセージが存在しないエラーの場合は、何もしない
+            } else {
+              throw error
+            }
+          }
+        })
+      )
     }
 
     return {

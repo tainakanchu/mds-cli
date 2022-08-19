@@ -1,6 +1,7 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import prompts from "prompts"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
@@ -11,7 +12,7 @@ const distDirPath = resolve(__dirname, "../../../.dist/")
 const distCategoryFilePath = join(distDirPath, "category.json")
 const distChannelFilePath = join(distDirPath, "channel.json")
 
-dotenv.config({ path: "./.envrc" })
+dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
 
 interface Options {
@@ -20,6 +21,14 @@ interface Options {
 }
 
 ;(async () => {
+  // コマンドの実行確認
+  const confirm = await prompts({
+    type: "confirm",
+    name: "value",
+    message: "Delete channel?",
+  })
+  if (!confirm.value) process.exit(0)
+
   const program = new Command()
   program
     .description("Delete channel command")
@@ -79,11 +88,7 @@ interface Options {
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  const deleteChannelResult = await deleteChannel(
-    discordClient,
-    channels,
-    distChannelFilePath
-  )
+  const deleteChannelResult = await deleteChannel(discordClient, channels)
   if (deleteChannelResult.status === "failed") {
     spinner.failed(null, deleteChannelResult.message)
     process.exit(0)
@@ -92,11 +97,7 @@ interface Options {
 
   // カテゴリーを削除する
   spinner.loading("Delete category")
-  const deleteCategoryResult = await deleteCategory(
-    discordClient,
-    categories,
-    distCategoryFilePath
-  )
+  const deleteCategoryResult = await deleteCategory(discordClient, categories)
   if (deleteCategoryResult.status === "failed") {
     spinner.failed(null, deleteCategoryResult.message)
     process.exit(0)
