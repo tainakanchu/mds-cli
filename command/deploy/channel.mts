@@ -6,7 +6,7 @@ import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { deployChannel, getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { createCategory } from "../../libs/category.mjs"
+import { deployCategory } from "../../libs/category.mjs"
 import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -70,11 +70,11 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルのカテゴリーを作成する
-  spinner.loading("Create category")
+  // チャンネルのカテゴリーをデプロイする
+  spinner.loading("Deploy category")
   let categories: Category[] | null = null
   try {
-    categories = await createCategory(
+    categories = await deployCategory(
       discordClient,
       [
         { id: "", name: "CHANNEL" },
@@ -95,7 +95,7 @@ interface Options {
     (category) => category.name === "ARCHIVE"
   )
   if (!defaultCategory || !archiveCategory) {
-    spinner.failed(null, "Failed to create category")
+    spinner.failed(null, "Failed to deploy category")
     process.exit(0)
   }
   spinner.success()

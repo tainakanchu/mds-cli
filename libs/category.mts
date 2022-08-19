@@ -38,12 +38,12 @@ export const createCategoryFile = async (
 }
 
 /**
- * Create category
+ * Deploy category
  * @param discordClient
  * @param categories
  * @param distCategoryFilePath
  */
-export const createCategory = async (
+export const deployCategory = async (
   discordClient: DiscordClientType,
   categories: Category[],
   distCategoryFilePath: string
