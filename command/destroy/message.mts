@@ -1,6 +1,7 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import prompts from "prompts"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
@@ -19,6 +20,14 @@ interface Options {
 }
 
 ;(async () => {
+  // コマンドの実行確認
+  const confirm = await prompts({
+    type: "confirm",
+    name: "value",
+    message: "Delete message?",
+  })
+  if (!confirm.value) process.exit(0)
+
   const program = new Command()
   program
     .description("Delete message command")
