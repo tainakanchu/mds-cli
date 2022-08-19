@@ -1,7 +1,7 @@
 import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import type { Channel as SlackBaseChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
-import { ChannelType } from "discord.js"
+import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType } from "discord.js"
 import type { Category } from "./category.mjs"
 import { getMessageFilePaths } from "./message.mjs"
@@ -267,21 +267,16 @@ export const deleteChannel = async (
   try {
     // チャンネルを削除する
     for (const channel of channels) {
-      await discordClient.channels.delete(channel.discord.channel_id)
+      try {
+        await discordClient.channels.delete(channel.discord.channel_id)
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code == 10003) {
+          // 削除対象のチャンネルが存在しないエラーの場合は、何もしない
+        } else {
+          throw error
+        }
+      }
     }
-
-    // チャンネルファイルを更新する
-    // const createChannelFileResult = await createChannelFile(
-    //   distChannelFilePath,
-    //   newChannels
-    // )
-    // if (createChannelFileResult.status === "failed") {
-    //   return {
-    //     channels: [],
-    //     status: "failed",
-    //     message: createChannelFileResult.message,
-    //   }
-    // }
 
     return { status: "success" }
   } catch (error) {

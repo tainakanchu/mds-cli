@@ -6,7 +6,7 @@ import {
   Message as SlackBaseMessage,
   FileElement,
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
-import { ChannelType, EmbedType } from "discord.js"
+import { ChannelType, EmbedType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
 import type { WebClient as SlackClientType } from "@slack/web-api"
 import { getUser, getUsername } from "./user.mjs"
@@ -510,11 +510,20 @@ export const deleteMessage = async (
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
         if (message.message_id) {
-          // ピン留めアイテムの場合は、ピン留めを解除する
-          if (message.is_pinned) {
-            await channelGuild.messages.unpin(message.message_id)
-          }
           await channelGuild.messages.delete(message.message_id)
+          try {
+            // ピン留めアイテムの場合は、ピン留めを解除する
+            if (message.is_pinned) {
+              await channelGuild.messages.unpin(message.message_id)
+            }
+            await channelGuild.messages.delete(message.message_id)
+          } catch (error) {
+            if (error instanceof DiscordAPIError && error.code === 10008) {
+              // 削除対象のメッセージが存在しないエラーの場合は、何もしない
+            } else {
+              throw error
+            }
+          }
         }
       }
     }

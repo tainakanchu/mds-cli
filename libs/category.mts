@@ -1,6 +1,6 @@
 import { access, mkdir, writeFile, constants, readFile } from "node:fs/promises"
 import { dirname } from "node:path"
-import { ChannelType } from "discord.js"
+import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType } from "discord.js"
 
 export interface Category {
@@ -116,23 +116,16 @@ export const deleteCategory = async (
   try {
     // カテゴリーを削除する
     for (const category of categories) {
-      if (category.id) {
+      try {
         await discordClient.channels.delete(category.id)
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code == 10003) {
+          // 削除対象のカテゴリーが存在しないエラーの場合は、何もしない
+        } else {
+          throw error
+        }
       }
     }
-
-    // カテゴリーファイルを更新する
-    // const createCategoryFileResult = await createCategoryFile(
-    //   distCategoryFilePath,
-    //   newCategories
-    // )
-    // if (createCategoryFileResult.status === "failed") {
-    //   return {
-    //     categories: [],
-    //     status: "failed",
-    //     message: createCategoryFileResult.message,
-    //   }
-    // }
 
     return { status: "success" }
   } catch (error) {
