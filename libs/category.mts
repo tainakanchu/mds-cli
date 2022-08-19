@@ -105,25 +105,20 @@ export const createCategory = async (
  * Delete category
  * @param discordClient
  * @param categories
- * @param distCategoryFilePath
  */
 export const deleteCategory = async (
   discordClient: DiscordClientType,
-  categories: Category[],
-  distCategoryFilePath: string
-): Promise<{
   categories: Category[]
+): Promise<{
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     // カテゴリーを削除する
-    const newCategories: Category[] = []
     for (const category of categories) {
       if (category.id) {
         await discordClient.channels.delete(category.id)
       }
-      newCategories.push(category)
     }
 
     // カテゴリーファイルを更新する
@@ -139,8 +134,8 @@ export const deleteCategory = async (
     //   }
     // }
 
-    return { categories: newCategories, status: "success" }
+    return { status: "success" }
   } catch (error) {
-    return { categories: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }

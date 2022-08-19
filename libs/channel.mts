@@ -248,37 +248,32 @@ export const createChannel = async (
  */
 export const deleteChannel = async (
   discordClient: DiscordClientType,
-  channels: Channel[],
-  distChannelFilePath: string
-): Promise<{
   channels: Channel[]
+): Promise<{
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     // チャンネルを削除する
-    const newChannels: Channel[] = []
     for (const channel of channels) {
       await discordClient.channels.delete(channel.discord.channel_id)
-      channel.discord.is_deleted = true
-      newChannels.push(channel)
     }
 
     // チャンネルファイルを更新する
-    const createChannelFileResult = await createChannelFile(
-      distChannelFilePath,
-      newChannels
-    )
-    if (createChannelFileResult.status === "failed") {
-      return {
-        channels: [],
-        status: "failed",
-        message: createChannelFileResult.message,
-      }
-    }
+    // const createChannelFileResult = await createChannelFile(
+    //   distChannelFilePath,
+    //   newChannels
+    // )
+    // if (createChannelFileResult.status === "failed") {
+    //   return {
+    //     channels: [],
+    //     status: "failed",
+    //     message: createChannelFileResult.message,
+    //   }
+    // }
 
-    return { channels: newChannels, status: "success" }
+    return { status: "success" }
   } catch (error) {
-    return { channels: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }
