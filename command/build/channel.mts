@@ -15,9 +15,30 @@ const distMessageDirPath = join(distDirPath, "message")
 dotenv.config({ path: "./.envrc" })
 const spinner = new Spinner()
 
+interface Options {
+  migrateArchive?: boolean
+}
+
 ;(async () => {
   const program = new Command()
-  program.description("Build channel file command").parse(process.argv)
+  program
+    .description("Build channel file command")
+    .requiredOption(
+      "-ma, --migrate-archive [boolean]",
+      "Whether to migrate archive channel",
+      process.env.MIGRATE_ARCHIVE === "true" ? true : false
+    )
+    .parse(process.argv)
+
+  // パラメーターの取得
+  spinner.loading("Check parameter")
+  const options: Options = program.opts()
+  const { migrateArchive } = options
+  if (migrateArchive === undefined) {
+    spinner.failed(null, "Required parameter is not found")
+    process.exit(0)
+  }
+  spinner.success()
 
   // チャンネルファイルを作成する
   spinner.loading("Build channel file")
@@ -25,7 +46,8 @@ const spinner = new Spinner()
     srcChannelFilePath,
     distChannelFilePath,
     srcMessageDirPath,
-    distMessageDirPath
+    distMessageDirPath,
+    migrateArchive
   )
   if (buildChannelFileResult.status === "failed") {
     spinner.failed(null, buildChannelFileResult.message)

@@ -89,21 +89,30 @@ export const createChannelFile = async (
  * @param distChannelFilePath
  * @param srcMessageDirPath
  * @param distMessageDirPath
+ * @param migrateArchive
  */
 export const buildChannelFile = async (
   srcChannelFilePath: string,
   distChannelFilePath: string,
   srcMessageDirPath: string,
-  distMessageDirPath: string
+  distMessageDirPath: string,
+  migrateArchive: boolean
 ): Promise<{
   status: "success" | "failed"
   message?: any
 }> => {
   try {
     await access(srcChannelFilePath, constants.R_OK)
-    const slackChannels = JSON.parse(
+    let slackChannels = JSON.parse(
       await readFile(srcChannelFilePath, "utf8")
     ) as SlackChannel[]
+
+    // アーカイブチャンネルを含めない場合は除外する
+    if (!migrateArchive) {
+      slackChannels = slackChannels.filter(
+        (channel) => channel.is_archived === false
+      )
+    }
 
     const newChannels = await Promise.all(
       slackChannels.map(async (channel) => {
@@ -178,15 +187,13 @@ export const buildChannelFile = async (
  * @param distChannelFilePath
  * @param defaultCategory
  * @param archiveCategory
- * @param migrateArchive
  */
 export const deployChannel = async (
   discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string,
   defaultCategory: Category,
-  archiveCategory: Category,
-  migrateArchive: boolean
+  archiveCategory: Category
 ): Promise<{
   channels: Channel[]
   status: "success" | "failed"

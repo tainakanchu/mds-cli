@@ -17,7 +17,6 @@ const spinner = new Spinner()
 interface Options {
   discordBotToken?: string
   discordServerId?: string
-  migrateArchive?: boolean
 }
 
 ;(async () => {
@@ -34,22 +33,13 @@ interface Options {
       "Discord Server ID",
       process.env.DISCORD_SERVER_ID
     )
-    .requiredOption(
-      "-ma, --migrate-archive [boolean]",
-      "Whether to migrate archive channel",
-      process.env.MIGRATE_ARCHIVE === "true" ? true : false
-    )
     .parse(process.argv)
 
   // パラメーターの取得
   spinner.loading("Check parameter")
   const options: Options = program.opts()
-  const { discordBotToken, discordServerId, migrateArchive } = options
-  if (
-    discordBotToken === undefined ||
-    discordServerId === undefined ||
-    migrateArchive === undefined
-  ) {
+  const { discordBotToken, discordServerId } = options
+  if (discordBotToken === undefined || discordServerId === undefined) {
     spinner.failed(null, "Required parameter is not found")
     process.exit(0)
   }
@@ -111,8 +101,7 @@ interface Options {
     channels,
     distChannelFilePath,
     defaultCategory,
-    archiveCategory,
-    migrateArchive
+    archiveCategory
   )
   if (deployChannelResult.status === "failed") {
     spinner.failed(null, deployChannelResult.message)
