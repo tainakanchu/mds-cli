@@ -1,10 +1,13 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import type { WebClient as SlackClientType } from "@slack/web-api"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { buildAllMessageFile } from "../../libs/message.mjs"
 import { getUserFile } from "../../libs/user.mjs"
+import type { User } from "../../libs/user.mjs"
 import { createSlackClient } from "../../libs/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -42,48 +45,55 @@ interface Options {
 
   // Slackのクライアントを作成する
   spinner.loading("Create slack client")
-  const { slackClient, ...createSlackClientResult } =
-    createSlackClient(slackBotToken)
-  if (!slackClient || createSlackClientResult.status === "failed") {
-    spinner.failed(null, createSlackClientResult.message)
+  let slackClient: SlackClientType | null = null
+  try {
+    slackClient = createSlackClient(slackBotToken)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // ユーザーを取得する
   spinner.loading("Get user")
-  const { users, ...getUserFileResult } = await getUserFile(distUserFilePath)
-  if (getUserFileResult.status === "failed") {
-    spinner.failed(null, getUserFileResult.message)
+  let users: User[] | null = null
+  try {
+    users = await getUserFile(distUserFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // メッセージファイルを作成する
   spinner.loading("Build message file")
-  const buildAllMessageFileResult = await buildAllMessageFile(
-    slackClient,
-    channels,
-    users
-  )
-  if (buildAllMessageFileResult.status === "failed") {
-    spinner.failed(null, buildAllMessageFileResult.message)
+  let isMaxFileSizeOver = false
+  try {
+    const buildAllMessageFileResult = await buildAllMessageFile(
+      slackClient,
+      channels,
+      users
+    )
+    if (buildAllMessageFileResult.isMaxFileSizeOver) isMaxFileSizeOver = true
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
+
   // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
-  if (buildAllMessageFileResult.isMaxFileSizeOver) {
+  if (isMaxFileSizeOver) {
     spinner.warning(
       "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
     )

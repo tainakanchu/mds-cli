@@ -14,20 +14,12 @@ export interface Category {
  */
 export const getCategoryFile = async (
   distCategoryFilePath: string
-): Promise<{
-  categories: Category[]
-  status: "success" | "failed"
-  message?: any
-}> => {
-  try {
-    await access(distCategoryFilePath, constants.R_OK)
-    const categories = JSON.parse(
-      await readFile(distCategoryFilePath, "utf8")
-    ) as Category[]
-    return { categories: categories, status: "success" }
-  } catch (error) {
-    return { categories: [], status: "failed", message: error }
-  }
+): Promise<Category[]> => {
+  await access(distCategoryFilePath, constants.R_OK)
+  const categories = JSON.parse(
+    await readFile(distCategoryFilePath, "utf8")
+  ) as Category[]
+  return categories
 }
 
 /**
@@ -38,19 +30,11 @@ export const getCategoryFile = async (
 export const createCategoryFile = async (
   distCategoryFilePath: string,
   categories: Category[]
-): Promise<{
-  status: "success" | "failed"
-  message?: any
-}> => {
-  try {
-    await mkdir(dirname(distCategoryFilePath), {
-      recursive: true,
-    })
-    await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
-    return { status: "success" }
-  } catch (error) {
-    return { status: "failed", message: error }
-  }
+): Promise<void> => {
+  await mkdir(dirname(distCategoryFilePath), {
+    recursive: true,
+  })
+  await writeFile(distCategoryFilePath, JSON.stringify(categories, null, 2))
 }
 
 /**
@@ -63,43 +47,25 @@ export const createCategory = async (
   discordClient: DiscordClientType,
   categories: Category[],
   distCategoryFilePath: string
-): Promise<{
-  categories: Category[]
-  status: "success" | "failed"
-  message?: any
-}> => {
-  try {
-    // カテゴリーを作成する
-    const newCategories = await Promise.all(
-      categories.map(async (category) => {
-        const rusult = await discordClient.channels.create({
-          name: category.name,
-          type: ChannelType.GuildCategory,
-        })
-        return {
-          id: rusult?.id ? rusult.id : "",
-          name: category.name,
-        } as Category
+): Promise<Category[]> => {
+  // カテゴリーを作成する
+  const newCategories = await Promise.all(
+    categories.map(async (category) => {
+      const rusult = await discordClient.channels.create({
+        name: category.name,
+        type: ChannelType.GuildCategory,
       })
-    )
-
-    // カテゴリーファイルを作成する
-    const createCategoryFileResult = await createCategoryFile(
-      distCategoryFilePath,
-      newCategories
-    )
-    if (createCategoryFileResult.status === "failed") {
       return {
-        categories: [],
-        status: "failed",
-        message: createCategoryFileResult.message,
-      }
-    }
+        id: rusult?.id ? rusult.id : "",
+        name: category.name,
+      } as Category
+    })
+  )
 
-    return { categories: newCategories, status: "success" }
-  } catch (error) {
-    return { categories: [], status: "failed", message: error }
-  }
+  // カテゴリーファイルを作成する
+  await createCategoryFile(distCategoryFilePath, newCategories)
+
+  return newCategories
 }
 
 /**
@@ -110,28 +76,18 @@ export const createCategory = async (
 export const deleteCategory = async (
   discordClient: DiscordClientType,
   categories: Category[]
-): Promise<{
-  status: "success" | "failed"
-  message?: any
-}> => {
-  try {
-    // カテゴリーを削除する
-    await Promise.all(
-      categories.map(async (category) => {
-        try {
-          await discordClient.channels.delete(category.id)
-        } catch (error) {
-          if (error instanceof DiscordAPIError && error.code == 10003) {
-            // 削除対象のカテゴリーが存在しないエラーの場合は、何もしない
-          } else {
-            throw error
-          }
+): Promise<void> => {
+  await Promise.all(
+    categories.map(async (category) => {
+      try {
+        await discordClient.channels.delete(category.id)
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code == 10003) {
+          // 削除対象のカテゴリーが存在しないエラーの場合は、何もしない
+        } else {
+          throw error
         }
-      })
-    )
-
-    return { status: "success" }
-  } catch (error) {
-    return { status: "failed", message: error }
-  }
+      }
+    })
+  )
 }

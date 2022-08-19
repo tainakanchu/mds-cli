@@ -2,9 +2,11 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import prompts from "prompts"
+import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { deleteAllMessage } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -55,30 +57,32 @@ interface Options {
 
   // Discordのクライアントを作成する
   spinner.loading("Create discord client")
-  const { discordClient, ...createDiscordClientResult } =
-    await createDiscordClient(discordBotToken, discordServerId)
-  if (!discordClient || createDiscordClientResult.status === "failed") {
-    spinner.failed(null, createDiscordClientResult.message)
+  let discordClient: DiscordClientType | null = null
+  try {
+    discordClient = await createDiscordClient(discordBotToken, discordServerId)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // メッセージを削除する
   spinner.loading("Delete message")
-  const deleteAllMessageResult = await deleteAllMessage(discordClient, channels)
-  if (deleteAllMessageResult.status === "failed") {
-    spinner.failed(null, deleteAllMessageResult.message)
+  try {
+    await deleteAllMessage(discordClient, channels)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
