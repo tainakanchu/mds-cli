@@ -18,7 +18,7 @@ export interface SlackMessage extends SlackBaseMessage {
 }
 
 export interface Message {
-  message_id?: string
+  id?: string
   channel_id?: string
   guild_id?: string
   content?: string
@@ -389,7 +389,7 @@ export const deployMessage = async (
         newMessages.push({
           ...message,
           ...{
-            message_id: sendMessage.id,
+            id: sendMessage.id,
             channel_id: sendMessage.channelId,
             guild_id: sendMessage.guildId,
             timestamp: sendMessage.createdTimestamp,
@@ -407,11 +407,12 @@ export const deployMessage = async (
           if (!pinMessage || !pinMessage.guildId) {
             throw new Error("Failed to pin message")
           }
+
           // ピン留めアイテムの追加メッセージを追加
           newMessages.push({
             ...message,
             ...{
-              message_id: pinMessage.id,
+              id: pinMessage.id,
               channel_id: pinMessage.channelId,
               guild_id: pinMessage.guildId,
               timestamp: pinMessage.createdTimestamp,
@@ -510,13 +511,13 @@ export const deleteMessage = async (
     const channelGuild = discordClient.channels.cache.get(channelId)
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        if (message.message_id) {
+        if (message.id) {
           try {
             // ピン留めアイテムの場合は、ピン留めを解除する
             if (message.is_pinned) {
-              await channelGuild.messages.unpin(message.message_id)
+              await channelGuild.messages.unpin(message.id)
             }
-            await channelGuild.messages.delete(message.message_id)
+            await channelGuild.messages.delete(message.id)
           } catch (error) {
             if (error instanceof DiscordAPIError && error.code === 10008) {
               // 削除対象のメッセージが存在しないエラーの場合は、何もしない
