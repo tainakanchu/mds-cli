@@ -2,6 +2,7 @@ import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname } from "node:path"
 import { WebClient as SlackClient } from "@slack/web-api"
 import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
+import retry from "async-retry"
 
 export interface User {
   slack: {
@@ -31,7 +32,9 @@ export const getUser = async (
   slackClient: SlackClient,
   userId: string
 ): Promise<User> => {
-  const result = await slackClient.users.info({ user: userId })
+  const result = await retry(
+    async () => await slackClient.users.info({ user: userId })
+  )
 
   // ユーザーの必須項目がない場合は例外を投げる
   if (
@@ -80,7 +83,9 @@ export const getUsername = async (
   slackClient: SlackClient,
   userId: string
 ): Promise<string | null> => {
-  const result = await slackClient.users.info({ user: userId })
+  const result = await retry(
+    async () => await slackClient.users.info({ user: userId })
+  )
   return result.user?.name || null
 }
 

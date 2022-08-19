@@ -13,6 +13,7 @@ import type {
   TextChannel,
 } from "discord.js"
 import type { WebClient as SlackClientType } from "@slack/web-api"
+import retry from "async-retry"
 import { getUser, getUsername } from "./user.mjs"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
@@ -321,11 +322,14 @@ export const deployMessage = async (
   const newMessages: Message[] = []
   let isMaxFileSizeOver = false
   for (const message of messages) {
-    const sendMessage = await channelGuild.send({
-      content: message.embeds ? undefined : message.content,
-      files: message.files,
-      embeds: message.embeds,
-    })
+    const sendMessage = await retry(
+      async () =>
+        await channelGuild.send({
+          content: message.embeds ? undefined : message.content,
+          files: message.files,
+          embeds: message.embeds,
+        })
+    )
 
     // メッセージの送信結果が取得できない場合は、例外を投げる
     if (!sendMessage || !sendMessage.guildId) {
@@ -352,7 +356,7 @@ export const deployMessage = async (
 
     // ピン留めアイテムの場合は、ピン留めする
     if (message.is_pinned) {
-      const pinMessage = await sendMessage.pin()
+      const pinMessage = await retry(async () => await sendMessage.pin())
       if (!pinMessage || !pinMessage.guildId) {
         throw new Error("Failed to pin message")
       }
@@ -437,15 +441,18 @@ export const deleteMessage = async (
   await Promise.all(
     messages.map(async (message) => {
       // メッセージの必須項目がない場合は例外を投げる
-      if (message.id === undefined)
+      if (message.id == undefined)
         throw new Error("Message is missing a required parameter")
 
       try {
+        // FIXME: なぜかmessage.idの型の参照がおかしいので、代入して回避している
+        const messageId = message.id
+
         // ピン留めアイテムの場合は、ピン留めを解除する
         if (message.is_pinned) {
-          await channelGuild.messages.unpin(message.id)
+          await retry(async () => await channelGuild.messages.unpin(messageId))
         }
-        await channelGuild.messages.delete(message.id)
+        await retry(async () => await channelGuild.messages.delete(messageId))
       } catch (error) {
         if (error instanceof DiscordAPIError && error.code === 10008) {
           // 削除対象のメッセージが存在しないエラーの場合は、何もしない
