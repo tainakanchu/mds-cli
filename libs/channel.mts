@@ -244,7 +244,6 @@ export const deployChannel = async (
  * Delete channel
  * @param discordClient
  * @param channels
- * @param distChannelFilePath
  */
 export const deleteChannel = async (
   discordClient: DiscordClientType,

@@ -458,7 +458,6 @@ export const deployAllMessage = async (
  *  Delete message
  * @param discordClient
  * @param channelId
- * @param distMessageFilePath
  * @param messages
  */
 export const deleteMessage = async (
