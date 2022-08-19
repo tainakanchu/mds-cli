@@ -39,7 +39,7 @@ export interface Message {
       image_url: string
       color: string | "808080"
     }
-    timestamp: number
+    timestamp: string
   }
 }
 
@@ -114,7 +114,7 @@ export const buildMessageFile = async (
     let isMaxFileSizeOver = false
     for (const message of messages) {
       // メッセージの必須項目がない場合は例外を投げる
-      if (message.text === undefined) {
+      if (message.text === undefined || message.ts === undefined) {
         throw new Error("Message is missing a required parameter")
       }
 
@@ -205,12 +205,9 @@ export const buildMessageFile = async (
         image_url: user.slack.image_url,
       }
 
-      // 小数点以下のタイムスタンプを切り捨て
-      const timestamp = Math.floor(Number(message.ts))
-
       // メッセージの投稿日時を算出
-      const postTime = format(fromUnixTime(timestamp), " HH:mm")
-      const isoPostDatetime = formatISO(fromUnixTime(timestamp))
+      const postTime = format(fromUnixTime(Number(message.ts)), " HH:mm")
+      const isoPostDatetime = formatISO(fromUnixTime(Number(message.ts)))
 
       newMessages.push({
         content: content,
@@ -228,7 +225,7 @@ export const buildMessageFile = async (
         ],
         slack: {
           anthor: anthor,
-          timestamp: timestamp,
+          timestamp: message.ts,
         },
       })
 
@@ -246,7 +243,7 @@ export const buildMessageFile = async (
           files: uploadFileUrls?.length ? uploadFileUrls : undefined,
           slack: {
             anthor: anthor,
-            timestamp: timestamp,
+            timestamp: message.ts,
           },
         })
       }
