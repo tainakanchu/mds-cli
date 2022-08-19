@@ -386,6 +386,21 @@ export const deployMessage = async (
           throw new Error("Failed to get deploy message result")
         }
 
+        newMessages.push({
+          ...message,
+          ...{
+            message_id: sendMessage.id,
+            channel_id: sendMessage.channelId,
+            guild_id: sendMessage.guildId,
+            timestamp: sendMessage.createdTimestamp,
+            anthor: {
+              id: sendMessage.author.id,
+              name: sendMessage.author.username,
+              type: "bot",
+            },
+          },
+        })
+
         // ピン留めアイテムの場合は、ピン留めする
         if (message.is_pinned) {
           const pinMessage = await sendMessage.pin()
@@ -409,21 +424,6 @@ export const deployMessage = async (
             },
           })
         }
-
-        newMessages.push({
-          ...message,
-          ...{
-            message_id: sendMessage.id,
-            channel_id: sendMessage.channelId,
-            guild_id: sendMessage.guildId,
-            timestamp: sendMessage.createdTimestamp,
-            anthor: {
-              id: sendMessage.author.id,
-              name: sendMessage.author.username,
-              type: "bot",
-            },
-          },
-        })
       }
     }
 
