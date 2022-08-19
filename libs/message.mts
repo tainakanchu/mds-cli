@@ -198,11 +198,11 @@ export const buildMessageFile = async (
         name: user.slack.name,
         type: message.bot_id
           ? "bot"
-          : user.slack.deleted
+          : user.slack.is_deleted
           ? "cancel-user"
           : "active-user",
         color: user.slack.color,
-        type_icon: message.bot_id ? "🤖" : user.slack.deleted ? "🔵" : "🟢",
+        type_icon: message.bot_id ? "🤖" : user.slack.is_deleted ? "🔵" : "🟢",
         image_url: user.slack.image_url,
       }
 
