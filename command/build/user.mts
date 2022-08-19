@@ -4,7 +4,6 @@ import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildUser } from "../../libs/user.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
-import { getMessageBotId, getBotData } from "../../libs/bot.mjs"
 import { createSlackClient } from "../../libs/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -63,28 +62,10 @@ interface Options {
   }
   spinner.success()
 
-  // メッセージファイル内のBotIdを取得する
-  spinner.loading("Get BotId in message file")
-  const { botIds, ...getMessageBotIdResult } = await getMessageBotId(channels)
-  if (getMessageBotIdResult.status === "failed") {
-    spinner.failed(null, getMessageBotIdResult.message)
-    process.exit(0)
-  }
-  spinner.success
-
-  // Botのデータを取得する
-  spinner.loading("Get bot data")
-  const { bots, ...getBotDataResult } = await getBotData(slackClient, botIds)
-  if (getBotDataResult.status === "failed") {
-    spinner.failed(null, getBotDataResult.message)
-    process.exit(0)
-  }
-  spinner.success
-
   // ユーザーファイルを作成する
   spinner.loading("Build user file")
   try {
-    await buildUser(srcUserFilePath, distUserFilePath, bots)
+    await buildUser(srcUserFilePath, distUserFilePath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)

@@ -8,6 +8,8 @@ import {
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType } from "discord.js"
 import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
+import type { WebClient as SlackClientType } from "@slack/web-api"
+import { getUser, getUsername } from "./user.mjs"
 import type { User } from "./user.mjs"
 import type { Channel } from "./channel.mjs"
 
@@ -93,6 +95,7 @@ export const createMessageFile = async (
  * @param users
  */
 export const buildMessageFile = async (
+  slackClient: SlackClientType,
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
@@ -113,16 +116,34 @@ export const buildMessageFile = async (
       let content = message.text || ""
 
       // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
-      if (/<@U[A-Z0-9]{10}>/.test(content)) {
-        for (const user of users) {
-          if (new RegExp(`<@${user.slack.id}>`, "g").test(content)) {
-            content = content.replaceAll(
-              new RegExp(`<@${user.slack.id}>`, "g"),
-              `@${user.discord.name}`
-            )
+      const matchMention = content.match(/<@U[A-Z0-9]{10}>/g)
+      if (matchMention?.length) {
+        const userIds = matchMention.map((mention) =>
+          mention.replace(/<@|>/g, "")
+        )
+        for (const userId of userIds) {
+          const user = users.find((user) => user.slack.id === userId)
+          if (user && user.slack.name) {
+            content = content.replaceAll(`<@${userId}>`, `@${user.slack.name}`)
+          } else {
+            // usersにないメンションは、APIから取得する
+            const getUsernameResult = await getUsername(slackClient, userId)
+            const username = getUsernameResult.username
+            if (username && getUsernameResult.status === "success") {
+              content = content.replaceAll(`<@${userId}>`, `@${username}`)
+            } else {
+              throw new Error(
+                `Failed to convert mention of @${userId} to username\n` +
+                  getUsernameResult.message
+              )
+            }
           }
         }
       }
+
+      // メッセージ内のチャンネルメンションタグを、Discordで表示される形式に置換
+      if (/<!channel>/.test(content))
+        content = content.replaceAll(/<!channel>/g, "@channel")
 
       // メッセージ内の太文字を、Discordで表示される形式に置換
       if (/\*.*\*/.test(content)) content = content.replaceAll(/\**\*/g, "**")
@@ -149,13 +170,22 @@ export const buildMessageFile = async (
       ]
 
       // メッセージの送信者情報を取得
-      const user = users.find(
+      let user = users.find(
         (user) =>
           user.slack.id === message.user ||
           user.slack.bot?.app_id === message.app_id
       )
+      // メッセージの送信者情報が取得できない場合は、APIから取得
       if (!user) {
-        throw new Error("Failed to get user for message")
+        if (message.user) {
+          const getUserResult = await getUser(slackClient, message.user)
+          if (getUserResult.user) {
+            user = getUserResult.user
+          }
+        }
+        if (!user) {
+          throw new Error("Failed to get user for message")
+        }
       }
       const anthor: Message["slack"]["anthor"] = {
         id: user.slack.id,
@@ -246,6 +276,7 @@ export const buildMessageFile = async (
  * @param users
  */
 export const buildAllMessageFile = async (
+  slackClient: SlackClientType,
   channels: Channel[],
   users: User[]
 ): Promise<{
@@ -264,6 +295,7 @@ export const buildAllMessageFile = async (
                 const distMessageFilePath =
                   channel.discord.message_file_paths[index]
                 const buildMessageFileResult = await buildMessageFile(
+                  slackClient,
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
