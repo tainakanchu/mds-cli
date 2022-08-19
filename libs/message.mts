@@ -30,6 +30,7 @@ export interface Message {
     type: "bot"
   }
   timestamp?: number
+  is_pinned: boolean
   slack: {
     anthor: {
       id: string
@@ -99,6 +100,7 @@ export const buildMessageFile = async (
   srcMessageFilePath: string,
   distMessageFilePath: string,
   users: User[],
+  pinIds: string[],
   maxFileSize: number
 ): Promise<{
   messages: Message[]
@@ -209,6 +211,9 @@ export const buildMessageFile = async (
       const postTime = format(fromUnixTime(Number(message.ts)), " HH:mm")
       const isoPostDatetime = formatISO(fromUnixTime(Number(message.ts)))
 
+      // メッセージがピン留めアイテムか判別
+      const isPinned = pinIds.includes(message.ts) ? true : false
+
       newMessages.push({
         content: content,
         embeds: [
@@ -223,6 +228,7 @@ export const buildMessageFile = async (
             },
           },
         ],
+        is_pinned: isPinned,
         slack: {
           anthor: anthor,
           timestamp: message.ts,
@@ -241,6 +247,7 @@ export const buildMessageFile = async (
         newMessages.push({
           content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
           files: uploadFileUrls?.length ? uploadFileUrls : undefined,
+          is_pinned: isPinned,
           slack: {
             anthor: anthor,
             timestamp: message.ts,
@@ -301,6 +308,7 @@ export const buildAllMessageFile = async (
                   srcMessageFilePath,
                   distMessageFilePath,
                   users,
+                  channel.slack.pin_ids,
                   channel.discord.guild.max_file_size
                 )
                 if (
@@ -367,22 +375,50 @@ export const deployMessage = async (
     let isMaxFileSizeOver = false
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
-        const result = await channelGuild.send({
+        const sendMessage = await channelGuild.send({
           content: message.embeds ? undefined : message.content,
           files: message.files,
           embeds: message.embeds,
         })
 
+        // メッセージの送信結果が取得できない場合は、例外を投げる
+        if (!sendMessage || !sendMessage.guildId) {
+          throw new Error("Failed to get deploy message result")
+        }
+
+        // ピン留めアイテムの場合は、ピン留めする
+        if (message.is_pinned) {
+          const pinMessage = await sendMessage.pin()
+          if (!pinMessage || !pinMessage.guildId) {
+            throw new Error("Failed to pin message")
+          }
+          // ピン留めアイテムの追加メッセージを追加
+          newMessages.push({
+            ...message,
+            ...{
+              message_id: pinMessage.id,
+              channel_id: pinMessage.channelId,
+              guild_id: pinMessage.guildId,
+              timestamp: pinMessage.createdTimestamp,
+              anthor: {
+                id: pinMessage.author.id,
+                name: pinMessage.author.username,
+                type: "bot",
+              },
+            },
+          })
+        }
+
         newMessages.push({
           ...message,
           ...{
-            message_id: result.id || "",
-            channel_id: result.channelId || "",
-            guild_id: result.guildId || "",
-            timestamp: result.createdTimestamp,
+            message_id: sendMessage.id,
+            channel_id: sendMessage.channelId,
+            guild_id: sendMessage.guildId,
+            timestamp: sendMessage.createdTimestamp,
             anthor: {
-              id: result.author.id,
-              name: result.author.username,
+              id: sendMessage.author.id,
+              name: sendMessage.author.username,
               type: "bot",
             },
           },
@@ -474,6 +510,10 @@ export const deleteMessage = async (
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
         if (message.message_id) {
+          // ピン留めアイテムの場合は、ピン留めを解除する
+          if (message.is_pinned) {
+            await channelGuild.messages.unpin(message.message_id)
+          }
           await channelGuild.messages.delete(message.message_id)
         }
       }

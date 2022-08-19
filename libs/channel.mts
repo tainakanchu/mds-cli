@@ -1,10 +1,20 @@
 import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
 import { dirname, join } from "node:path"
-import { Channel as SlackChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
+import type { Channel as SlackBaseChannel } from "@slack/web-api/dist/response/ChannelsCreateResponse"
 import { ChannelType } from "discord.js"
 import type { Guild as DiscordClientType } from "discord.js"
 import type { Category } from "./category.mjs"
 import { getMessageFilePaths } from "./message.mjs"
+
+interface SlackChannel extends SlackBaseChannel {
+  pins?: {
+    id: string
+    type: "C"
+    created: number
+    user: string
+    owner: string
+  }[]
+}
 
 export interface Channel {
   slack: {
@@ -12,6 +22,7 @@ export interface Channel {
     channel_name: string
     is_archived: boolean
     purpose: string
+    pin_ids: string[]
     message_file_paths: string[]
   }
   discord: {
@@ -122,6 +133,7 @@ export const buildChannelFile = async (
             channel_name: channel.name,
             is_archived: channel.is_archived,
             purpose: channel.purpose?.value || "",
+            pin_ids: channel.pins?.map((pin) => pin.id) || [],
             message_file_paths: srcMessageFilePaths,
           },
           discord: {
