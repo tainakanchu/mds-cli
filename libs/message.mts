@@ -7,7 +7,11 @@ import {
   FileElement,
 } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType, DiscordAPIError } from "discord.js"
-import type { Guild as DiscordClientType, APIEmbed as Embed } from "discord.js"
+import type {
+  Guild as DiscordClientType,
+  APIEmbed as Embed,
+  TextChannel,
+} from "discord.js"
 import type { WebClient as SlackClientType } from "@slack/web-api"
 import { getUser, getUsername } from "./user.mjs"
 import type { User } from "./user.mjs"
@@ -301,30 +305,21 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 
 /**
  * Deploy message
- * @param discordClient
- * @param channelId
+ * @param channelGuild
  * @param distMessageFilePath
  * @param messages
  */
 export const deployMessage = async (
-  discordClient: DiscordClientType,
+  channelGuild: TextChannel,
   messages: Message[],
-  channelId: string,
   distMessageFilePath: string
 ): Promise<{
   messages: Message[]
   isMaxFileSizeOver?: boolean
 }> => {
-  const channelGuild = discordClient.channels.cache.get(channelId)
-  let isMaxFileSizeOver = false
-
-  // チャンネルの必須項目がない場合は例外を投げる
-  if (!channelGuild || channelGuild.type !== ChannelType.GuildText) {
-    throw new Error("Failed to get channel")
-  }
-
   // 時系列順にメッセージを作成するため、メッセージ作成処理は直列処理で実行
   const newMessages: Message[] = []
+  let isMaxFileSizeOver = false
   for (const message of messages) {
     const sendMessage = await channelGuild.send({
       content: message.embeds ? undefined : message.content,
@@ -403,12 +398,22 @@ export const deployAllMessage = async (
   let isMaxFileSizeOver = false
   await Promise.all(
     channels.map(async (channel) => {
+      // チャンネルギルドを作成
+      const channelGuild = discordClient.channels.cache.get(
+        channel.discord.channel_id
+      )
+      if (
+        channelGuild === undefined ||
+        channelGuild.type !== ChannelType.GuildText
+      ) {
+        throw new Error("Failed to get channel guild")
+      }
+
       for (const messageFilePath of channel.discord.message_file_paths) {
         const messages = await getMessageFile(messageFilePath)
         const deployMessageResult = await deployMessage(
-          discordClient,
+          channelGuild,
           messages,
-          channel.discord.channel_id,
           messageFilePath
         )
         if (deployMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
@@ -422,40 +427,34 @@ export const deployAllMessage = async (
 
 /**
  *  Delete message
- * @param discordClient
- * @param channelId
+ * @param channelGuild
  * @param messages
  */
 export const deleteMessage = async (
-  discordClient: DiscordClientType,
-  messages: Message[],
-  channelId: string
+  channelGuild: TextChannel,
+  messages: Message[]
 ): Promise<void> => {
-  // メッセージを削除
-  const channelGuild = discordClient.channels.cache.get(channelId)
-  if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-    await Promise.all(
-      messages.map(async (message) => {
-        // メッセージの必須項目がない場合は例外を投げる
-        if (message.id === undefined)
-          throw new Error("Message is missing a required parameter")
+  await Promise.all(
+    messages.map(async (message) => {
+      // メッセージの必須項目がない場合は例外を投げる
+      if (message.id === undefined)
+        throw new Error("Message is missing a required parameter")
 
-        try {
-          // ピン留めアイテムの場合は、ピン留めを解除する
-          if (message.is_pinned) {
-            await channelGuild.messages.unpin(message.id)
-          }
-          await channelGuild.messages.delete(message.id)
-        } catch (error) {
-          if (error instanceof DiscordAPIError && error.code === 10008) {
-            // 削除対象のメッセージが存在しないエラーの場合は、何もしない
-          } else {
-            throw error
-          }
+      try {
+        // ピン留めアイテムの場合は、ピン留めを解除する
+        if (message.is_pinned) {
+          await channelGuild.messages.unpin(message.id)
         }
-      })
-    )
-  }
+        await channelGuild.messages.delete(message.id)
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code === 10008) {
+          // 削除対象のメッセージが存在しないエラーの場合は、何もしない
+        } else {
+          throw error
+        }
+      }
+    })
+  )
 }
 
 /**
@@ -467,14 +466,21 @@ export const deleteAllMessage = async (
 ): Promise<void> => {
   await Promise.all(
     channels.map(async (channel) => {
+      // チャンネルギルドを作成
+      const channelGuild = discordClient.channels.cache.get(
+        channel.discord.channel_id
+      )
+      if (
+        channelGuild === undefined ||
+        channelGuild.type !== ChannelType.GuildText
+      ) {
+        throw new Error("Failed to get channel guild")
+      }
+
       await Promise.all(
         channel.discord.message_file_paths.map(async (messageFilePath) => {
           const messages = await getMessageFile(messageFilePath)
-          await deleteMessage(
-            discordClient,
-            messages,
-            channel.discord.channel_id
-          )
+          await deleteMessage(channelGuild, messages)
         })
       )
     })
