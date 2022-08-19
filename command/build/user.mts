@@ -64,10 +64,9 @@ interface Options {
 
   // ユーザーファイルを作成する
   spinner.loading("Build user file")
-  try {
-    await buildUser(srcUserFilePath, distUserFilePath)
-  } catch (error) {
-    spinner.failed(null, error)
+  const buildUserResult = await buildUser(srcUserFilePath, distUserFilePath)
+  if (buildUserResult.status === "failed") {
+    spinner.failed(null, buildUserResult.message)
     process.exit(0)
   }
   spinner.success()
