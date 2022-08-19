@@ -1,9 +1,11 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import type { WebClient as SlackClientType } from "@slack/web-api"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { buildUser } from "../../libs/user.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { createSlackClient } from "../../libs/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -43,30 +45,32 @@ interface Options {
 
   // Slackのクライアントを作成する
   spinner.loading("Create slack client")
-  const { slackClient, ...createSlackClientResult } =
-    createSlackClient(slackBotToken)
-  if (!slackClient || createSlackClientResult.status === "failed") {
-    spinner.failed(null, createSlackClientResult.message)
+  let slackClient: SlackClientType | null = null
+  try {
+    slackClient = createSlackClient(slackBotToken)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // ユーザーファイルを作成する
   spinner.loading("Build user file")
-  const buildUserResult = await buildUser(srcUserFilePath, distUserFilePath)
-  if (buildUserResult.status === "failed") {
-    spinner.failed(null, buildUserResult.message)
+  try {
+    await buildUser(srcUserFilePath, distUserFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()

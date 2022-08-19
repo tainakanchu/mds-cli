@@ -2,10 +2,13 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import prompts from "prompts"
+import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
 import { deleteCategory, getCategoryFile } from "../../libs/category.mjs"
+import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -56,50 +59,53 @@ interface Options {
 
   // Discordのクライアントを作成する
   spinner.loading("Create discord client")
-  const { discordClient, ...createDiscordClientResult } =
-    await createDiscordClient(discordBotToken, discordServerId)
-  if (!discordClient || createDiscordClientResult.status === "failed") {
-    spinner.failed(null, createDiscordClientResult.message)
+  let discordClient: DiscordClientType | null = null
+  try {
+    discordClient = await createDiscordClient(discordBotToken, discordServerId)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // カテゴリーを取得する
   spinner.loading("Get category")
-  const { categories, ...getCategoryFileResult } = await getCategoryFile(
-    distCategoryFilePath
-  )
-  if (getCategoryFileResult.status === "failed") {
-    spinner.failed(null, getCategoryFileResult.message)
+  let categories: Category[] | null = null
+  try {
+    categories = await getCategoryFile(distCategoryFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  const deleteChannelResult = await deleteChannel(discordClient, channels)
-  if (deleteChannelResult.status === "failed") {
-    spinner.failed(null, deleteChannelResult.message)
+  try {
+    await deleteChannel(discordClient, channels)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // カテゴリーを削除する
   spinner.loading("Delete category")
-  const deleteCategoryResult = await deleteCategory(discordClient, categories)
-  if (deleteCategoryResult.status === "failed") {
-    spinner.failed(null, deleteCategoryResult.message)
+  try {
+    await deleteCategory(discordClient, categories)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()

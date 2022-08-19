@@ -1,10 +1,13 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { deployChannel, getChannelFile } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { createCategory } from "../../libs/category.mjs"
+import type { Category } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -47,37 +50,40 @@ interface Options {
 
   // Discordのクライアントを作成する
   spinner.loading("Create discord client")
-  const { discordClient, ...createDiscordClientResult } =
-    await createDiscordClient(discordBotToken, discordServerId)
-  if (!discordClient || createDiscordClientResult.status === "failed") {
-    spinner.failed(null, createDiscordClientResult.message)
+  let discordClient: DiscordClientType | null = null
+  try {
+    discordClient = await createDiscordClient(discordBotToken, discordServerId)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルのカテゴリーを作成する
   spinner.loading("Create category")
-  const { categories, ...createCategoryResult } = await createCategory(
-    discordClient,
-    [
-      { id: "", name: "CHANNEL" },
-      { id: "", name: "ARCHIVE" },
-    ],
-    distCategoryFilePath
-  )
-  if (createCategoryResult.status === "failed") {
-    spinner.failed(null, createCategoryResult.message)
+  let categories: Category[] | null = null
+  try {
+    categories = await createCategory(
+      discordClient,
+      [
+        { id: "", name: "CHANNEL" },
+        { id: "", name: "ARCHIVE" },
+      ],
+      distCategoryFilePath
+    )
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
 
@@ -96,15 +102,16 @@ interface Options {
 
   // チャンネルをデプロイする
   spinner.loading("Deploy channel")
-  const deployChannelResult = await deployChannel(
-    discordClient,
-    channels,
-    distChannelFilePath,
-    defaultCategory,
-    archiveCategory
-  )
-  if (deployChannelResult.status === "failed") {
-    spinner.failed(null, deployChannelResult.message)
+  try {
+    await deployChannel(
+      discordClient,
+      channels,
+      distChannelFilePath,
+      defaultCategory,
+      archiveCategory
+    )
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()

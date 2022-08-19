@@ -42,15 +42,16 @@ interface Options {
 
   // チャンネルファイルを作成する
   spinner.loading("Build channel file")
-  const buildChannelFileResult = await buildChannelFile(
-    srcChannelFilePath,
-    distChannelFilePath,
-    srcMessageDirPath,
-    distMessageDirPath,
-    migrateArchive
-  )
-  if (buildChannelFileResult.status === "failed") {
-    spinner.failed(null, buildChannelFileResult.message)
+  try {
+    await buildChannelFile(
+      srcChannelFilePath,
+      distChannelFilePath,
+      srcMessageDirPath,
+      distMessageDirPath,
+      migrateArchive
+    )
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()

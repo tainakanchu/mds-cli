@@ -1,9 +1,11 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
+import type { Channel } from "../../libs/channel.mjs"
 import { deployAllMessage } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -46,35 +48,43 @@ interface Options {
 
   // Discordのクライアントを作成する
   spinner.loading("Create discord client")
-  const { discordClient, ...createDiscordClientResult } =
-    await createDiscordClient(discordBotToken, discordServerId)
-  if (!discordClient || createDiscordClientResult.status === "failed") {
-    spinner.failed(null, createDiscordClientResult.message)
+  let discordClient: DiscordClientType | null = null
+  try {
+    discordClient = await createDiscordClient(discordBotToken, discordServerId)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // チャンネルを取得する
   spinner.loading("Get channel")
-  const { channels, ...getChannelFileResult } = await getChannelFile(
-    distChannelFilePath
-  )
-  if (getChannelFileResult.status === "failed") {
-    spinner.failed(null, getChannelFileResult.message)
+  let channels: Channel[] | null = null
+  try {
+    channels = await getChannelFile(distChannelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
 
   // メッセージをデプロイする
   spinner.loading("Deploy message")
-  const deployAllMessageResult = await deployAllMessage(discordClient, channels)
-  if (deployAllMessageResult.status === "failed") {
-    spinner.failed(null, deployAllMessageResult.message)
+  let isMaxFileSizeOver = false
+  try {
+    const deployAllMessageResult = await deployAllMessage(
+      discordClient,
+      channels
+    )
+    if (deployAllMessageResult.isMaxFileSizeOver) isMaxFileSizeOver = true
+  } catch (error) {
+    spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
+
   // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
-  if (deployAllMessageResult.isMaxFileSizeOver) {
+  if (isMaxFileSizeOver) {
     spinner.warning(
       "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
     )
