@@ -96,7 +96,6 @@ export const buildChannelFile = async (
   srcMessageDirPath: string,
   distMessageDirPath: string
 ): Promise<{
-  channels: Channel[]
   status: "success" | "failed"
   message?: any
 }> => {
@@ -151,20 +150,20 @@ export const buildChannelFile = async (
       }
     }
 
+    // チャンネルファイルを作成する
     const createChannelFileResult = await createChannelFile(
       distChannelFilePath,
       newChannels
     )
     if (createChannelFileResult.status === "failed") {
       return {
-        channels: newChannels,
         status: "failed",
         message: createChannelFileResult.message,
       }
     }
-    return { channels: newChannels, status: "success" }
+    return { status: "success" }
   } catch (error) {
-    return { channels: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }
 

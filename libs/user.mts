@@ -112,7 +112,7 @@ export const getUserFile = async (
 export const buildUser = async (
   srcUserFilePath: string,
   distUserFilePath: string
-): Promise<{ users: User[]; status: "success" | "failed"; message?: any }> => {
+): Promise<{ status: "success" | "failed"; message?: any }> => {
   try {
     await access(srcUserFilePath, constants.R_OK)
     const usersFile = await readFile(srcUserFilePath, "utf8")
@@ -168,8 +168,8 @@ export const buildUser = async (
     })
     await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
 
-    return { users: users, status: "success" }
+    return { status: "success" }
   } catch (error) {
-    return { users: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }

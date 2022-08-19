@@ -103,7 +103,6 @@ export const buildMessageFile = async (
   pinIds: string[],
   maxFileSize: number
 ): Promise<{
-  messages: Message[]
   isMaxFileSizeOver?: boolean
   status: "success" | "failed"
   message?: any
@@ -262,20 +261,12 @@ export const buildMessageFile = async (
       newMessages
     )
     if (createMessageFileResult.status === "failed") {
-      return {
-        messages: [],
-        status: "failed",
-        message: createMessageFileResult.message,
-      }
+      return { status: "failed", message: createMessageFileResult.message }
     }
 
-    return {
-      messages: newMessages,
-      isMaxFileSizeOver: isMaxFileSizeOver,
-      status: "success",
-    }
+    return { isMaxFileSizeOver: isMaxFileSizeOver, status: "success" }
   } catch (error) {
-    return { messages: [], status: "failed", message: error }
+    return { status: "failed", message: error }
   }
 }
 
