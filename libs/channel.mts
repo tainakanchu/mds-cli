@@ -111,28 +111,35 @@ export const buildChannelFile = async (
             messageFilePath.replace(srcMessageDirPath, distMessageDirPath)
         )
 
-        newChannels.push({
+        // チャンネルの必須項目がない場合は例外を投げる
+        if (channel.id === undefined || channel.is_archived === undefined) {
+          throw new Error("Channel is missing a required parameter")
+        }
+
+        const newChannel: Channel = {
           slack: {
-            channel_id: channel.id || "",
-            channel_name: channel.name || "",
-            is_archived: channel.is_archived || false,
-            purpose: channel.purpose?.value ? channel.purpose.value : "",
+            channel_id: channel.id,
+            channel_name: channel.name,
+            is_archived: channel.is_archived,
+            purpose: channel.purpose?.value || "",
             message_file_paths: srcMessageFilePaths,
           },
           discord: {
             channel_id: "",
-            channel_name: channel.name || "",
-            is_archived: channel.is_archived || false,
+            channel_name: channel.name,
+            is_archived: channel.is_archived,
             is_deleted: false,
             guild: {
               boost_level: 0,
               boost_count: 0,
               max_file_size: 8000000,
             },
-            topic: channel.purpose?.value ? channel.purpose.value : "",
+            topic: channel.purpose?.value || "",
             message_file_paths: distMessageFilePaths,
           },
-        })
+        }
+
+        newChannels.push(newChannel)
       }
     }
 

@@ -113,7 +113,12 @@ export const buildMessageFile = async (
     const messages = JSON.parse(messageFile) as SlackMessage[]
     let isMaxFileSizeOver = false
     for (const message of messages) {
-      let content = message.text || ""
+      // メッセージの必須項目がない場合は例外を投げる
+      if (message.text === undefined) {
+        throw new Error("Message is missing a required parameter")
+      }
+
+      let content = message.text
 
       // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
       const matchMention = content.match(/<@U[A-Z0-9]{10}>/g)

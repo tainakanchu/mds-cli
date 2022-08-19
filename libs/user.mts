@@ -133,12 +133,12 @@ export const buildUser = async (
 
         // ユーザーの必須項目がない場合は例外を投げる
         if (
-          !user.id ||
-          !name ||
+          user.id === undefined ||
+          name === undefined ||
           user.deleted === undefined ||
           user.is_bot === undefined ||
-          !user.color ||
-          !user.profile?.image_512
+          user.color === undefined ||
+          user.profile?.image_512 === undefined
         ) {
           throw new Error("User is missing a required parameter")
         }
