@@ -21,14 +21,15 @@ flowchart LR
   slackBot(<img src='./docs/img/slack-bot.png' /><br><label>SlackBot</label>)
   discordBot(<img src='./docs/img/discord-bot.png' /><br><label>DiscordBot</label>)
   exportFile(<img src='./docs/img/slack-file.png' /><br><label>Export File</label>)
-  migrationFile(<img src='./docs/img/discord-file.png' /><br><label>Migration File</label>)
+  migrateFile(<img src='./docs/img/discord-file.png' /><br><label>Migrate File</label>)
 
-  msd <--> |Migrate discord| discordBot
+  msd ---> |Migrate discord| discordBot
   discordBot <--> discord
-  msd <--> |Check bot info| slackBot
+  msd <--> |Check slack data| slackBot
+  msd ---> |Convert slack data| migrateFile
+  migrateFile --> |Get migrate data| msd
   slackBot <--> slack
   exportFile --> |Get slack data| msd
-  msd <--> |Convert slack data| migrationFile
 ```
 
 ## ドキュメント
