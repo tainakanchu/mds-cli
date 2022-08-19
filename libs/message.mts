@@ -510,7 +510,6 @@ export const deleteMessage = async (
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
       for (const message of messages) {
         if (message.message_id) {
-          await channelGuild.messages.delete(message.message_id)
           try {
             // ピン留めアイテムの場合は、ピン留めを解除する
             if (message.is_pinned) {
