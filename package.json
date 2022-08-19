@@ -11,12 +11,12 @@
     "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
     "build:user": "node --loader ts-node/esm ./command/build/user.mts",
     "build:message": "node --loader ts-node/esm ./command/build/message.mts",
-    "deploy": "run-p \"deploy:*\"",
+    "deploy": "run-s \"deploy:*\"",
     "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
-    "destroy": "run-p \"deploy:*\"",
-    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
+    "destroy": "run-s \"deploy:*\"",
     "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
+    "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
     "start": "run-s build deploy"
   },
   "volta": {
