@@ -79,11 +79,7 @@ interface Options {
 
   // チャンネルを削除する
   spinner.loading("Delete channel")
-  const deleteChannelResult = await deleteChannel(
-    discordClient,
-    channels,
-    distChannelFilePath
-  )
+  const deleteChannelResult = await deleteChannel(discordClient, channels)
   if (deleteChannelResult.status === "failed") {
     spinner.failed(null, deleteChannelResult.message)
     process.exit(0)
@@ -92,11 +88,7 @@ interface Options {
 
   // カテゴリーを削除する
   spinner.loading("Delete category")
-  const deleteCategoryResult = await deleteCategory(
-    discordClient,
-    categories,
-    distCategoryFilePath
-  )
+  const deleteCategoryResult = await deleteCategory(discordClient, categories)
   if (deleteCategoryResult.status === "failed") {
     spinner.failed(null, deleteCategoryResult.message)
     process.exit(0)
