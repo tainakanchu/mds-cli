@@ -405,6 +405,7 @@ export const deployMessage = async (
                 name: pinMessage.author.username,
                 type: "bot",
               },
+              is_pinned: false,
             },
           })
         }
