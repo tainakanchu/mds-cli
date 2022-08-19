@@ -54,8 +54,7 @@ Consider releasing the maximum file upload size limit with Discord's server boos
 
 Discordにはチャンネルのアーカイブ機能がないため、アーカイブされたチャンネルはARCHIVEカテゴリーにまとめ、それ以外のチャンネルはCHANNELカテゴリーにまとめる仕様となっています  
 
-アーカイブされたチャンネルを移行したくない場合は、`.envrc`ファイルのMIGRATE_ARCHIVEの環境変数の値に「"false"」を設定し、  
-`direnv allow`のコマンドを実行して、環境変数の変更を反映してからコマンドを実行してください  
+アーカイブされたチャンネルを移行したくない場合は、`.env`ファイルのMIGRATE_ARCHIVEの環境変数の値に「"false"」を設定してからチャンネルファイルビルドコマンドを実行してください  
 
 ## メッセージの形式
 
@@ -77,7 +76,7 @@ Discordに表示されるメッセージの形式は下記のようになって�
 | 🤖           | Bot             |
 
 メッセージは見やすいように、Discordの[埋め込み](https://discordjs.guide/popular-topics/embeds.html#embed-preview)の機能を利用した形となっています  
-埋め込みのカラーはSlackのユーザーカラーを反映しています
+埋め込みのカラーはSlackのユーザーカラーを反映しています  
 
 ## 添付ファイルの表示位置
 

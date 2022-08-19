@@ -10,7 +10,7 @@ const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
 const distChannelFilePath = join(distDirPath, "channel.json")
 
-dotenv.config({ path: "./.envrc" })
+dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
 
 interface Options {

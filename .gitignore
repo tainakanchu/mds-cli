@@ -10,7 +10,7 @@ node_modules/
 .history/
 
 # Environment File
-.envrc
+.env
 
 # Working Directory
 .src/

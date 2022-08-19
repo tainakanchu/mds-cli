@@ -12,7 +12,7 @@ const distDirPath = resolve(__dirname, "../../../.dist/")
 const distChannelFilePath = join(distDirPath, "channel.json")
 const distUserFilePath = join(distDirPath, "user.json")
 
-dotenv.config({ path: "./.envrc" })
+dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
 
 interface Options {
