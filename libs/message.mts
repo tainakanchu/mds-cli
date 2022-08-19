@@ -19,6 +19,7 @@ export interface SlackMessage extends SlackBaseMessage {
 
 export interface Message {
   id?: string
+  type: "default" | "pin_message"
   channel_id?: string
   guild_id?: string
   content?: string
@@ -214,6 +215,7 @@ export const buildMessageFile = async (
       const isPinned = pinIds.includes(message.ts) ? true : false
 
       newMessages.push({
+        type: "default",
         content: content,
         embeds: [
           {
@@ -244,6 +246,7 @@ export const buildMessageFile = async (
       if (sizeOverFileUrls || uploadFileUrls) {
         // 埋め込みの下に添付ファイルが表示されるように、添付ファイルは別メッセージにする
         newMessages.push({
+          type: "default",
           content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
           files: uploadFileUrls?.length ? uploadFileUrls : undefined,
           is_pinned: isPinned,
@@ -382,6 +385,9 @@ export const deployMessage = async (
         throw new Error("Failed to get deploy message result")
       }
 
+      // システムメッセージはメッセージを作成しないように除外する
+      if (message.type !== "default") continue
+
       newMessages.push({
         ...message,
         ...{
@@ -409,6 +415,7 @@ export const deployMessage = async (
           ...message,
           ...{
             id: pinMessage.id,
+            types: "pin_message",
             channel_id: pinMessage.channelId,
             guild_id: pinMessage.guildId,
             timestamp: pinMessage.createdTimestamp,
