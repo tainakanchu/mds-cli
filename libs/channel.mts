@@ -28,8 +28,6 @@ export interface Channel {
   discord: {
     channel_id: string
     channel_name: string
-    is_archived: boolean
-    is_deleted: boolean
     guild: {
       boost_level: 0 | 1 | 2 | 3
       boost_count: number
@@ -139,8 +137,6 @@ export const buildChannelFile = async (
           discord: {
             channel_id: "",
             channel_name: channel.name,
-            is_archived: channel.is_archived,
-            is_deleted: false,
             guild: {
               boost_level: 0,
               boost_count: 0,
@@ -197,12 +193,12 @@ export const deployChannel = async (
     // チャンネルを作成する
     const newChannels: Channel[] = []
     for (const channel of channels) {
-      if (!channel.discord.is_archived || migrateArchive) {
+      if (!channel.slack.is_archived || migrateArchive) {
         const result = await discordClient.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
           topic: channel.discord.topic ? channel.discord.topic : undefined,
-          parent: channel.discord.is_archived
+          parent: channel.slack.is_archived
             ? archiveCategory.id
             : defaultCategory.id,
         })
