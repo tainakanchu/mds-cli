@@ -65,11 +65,3 @@ volta install node@18.7.0 npm@8.15.1
 
 npm install
 ```
-
-必要に応じて下記のコマンドで、パッケージをアップデートする  
-
-```zsh
-npx ncu -u
-
-npm install
-```
