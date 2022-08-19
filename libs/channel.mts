@@ -99,15 +99,19 @@ export const buildChannelFile = async (
   status: "success" | "failed"
   message?: any
 }> => {
-  const newChannels: Channel[] = []
   try {
     await access(srcChannelFilePath, constants.R_OK)
     const slackChannels = JSON.parse(
       await readFile(srcChannelFilePath, "utf8")
     ) as SlackChannel[]
 
-    for (const channel of slackChannels) {
-      if (channel.name) {
+    const newChannels = await Promise.all(
+      slackChannels.map(async (channel) => {
+        // チャンネルの必須項目がない場合は例外を投げる
+        if (channel.name === undefined) {
+          throw new Error("Channel is missing a required parameter")
+        }
+
         // Slackのメッセージファイルのパスを取得する
         const srcMessageFilePaths = await getMessageFilePaths(
           join(srcMessageDirPath, channel.name)
@@ -146,9 +150,9 @@ export const buildChannelFile = async (
           },
         }
 
-        newChannels.push(newChannel)
-      }
-    }
+        return newChannel
+      })
+    )
 
     // チャンネルファイルを作成する
     const createChannelFileResult = await createChannelFile(
@@ -190,9 +194,8 @@ export const deployChannel = async (
 }> => {
   try {
     // チャンネルを作成する
-    const newChannels: Channel[] = []
-    for (const channel of channels) {
-      if (!channel.slack.is_archived || migrateArchive) {
+    const newChannels = await Promise.all(
+      channels.map(async (channel) => {
         const result = await discordClient.channels.create({
           name: channel.discord.channel_name,
           type: ChannelType.GuildText,
@@ -219,14 +222,26 @@ export const deployChannel = async (
           maxFileSize = 100000000
         }
 
-        const newChannel = { ...channel }
-        newChannel.discord.channel_id = result.id
-        newChannel.discord.guild.boost_level = boostLevel
-        newChannel.discord.guild.boost_count = boostCount
-        newChannel.discord.guild.max_file_size = maxFileSize
-        newChannels.push(newChannel)
-      }
-    }
+        const newChannel = {
+          ...channel,
+          ...{
+            discord: {
+              channel_id: result.id,
+              channel_name: channel.discord.channel_name,
+              guild: {
+                boost_level: boostLevel,
+                boost_count: boostCount,
+                max_file_size: maxFileSize,
+              },
+              topic: channel.discord.topic,
+              message_file_paths: channel.discord.message_file_paths,
+            },
+          },
+        }
+
+        return newChannel
+      })
+    )
 
     // チャンネルファイルを更新する
     const createChannelFileResult = await createChannelFile(
@@ -261,17 +276,19 @@ export const deleteChannel = async (
 }> => {
   try {
     // チャンネルを削除する
-    for (const channel of channels) {
-      try {
-        await discordClient.channels.delete(channel.discord.channel_id)
-      } catch (error) {
-        if (error instanceof DiscordAPIError && error.code == 10003) {
-          // 削除対象のチャンネルが存在しないエラーの場合は、何もしない
-        } else {
-          throw error
+    await Promise.all(
+      channels.map(async (channel) => {
+        try {
+          await discordClient.channels.delete(channel.discord.channel_id)
+        } catch (error) {
+          if (error instanceof DiscordAPIError && error.code == 10003) {
+            // 削除対象のチャンネルが存在しないエラーの場合は、何もしない
+          } else {
+            throw error
+          }
         }
-      }
-    }
+      })
+    )
 
     return { status: "success" }
   } catch (error) {

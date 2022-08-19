@@ -360,62 +360,66 @@ export const deployMessage = async (
   message?: any
 }> => {
   try {
-    // メッセージを作成
     const channelGuild = discordClient.channels.cache.get(channelId)
-    const newMessages: Message[] = []
     let isMaxFileSizeOver = false
-    if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-      for (const message of messages) {
-        const sendMessage = await channelGuild.send({
-          content: message.embeds ? undefined : message.content,
-          files: message.files,
-          embeds: message.embeds,
-        })
 
-        // メッセージの送信結果が取得できない場合は、例外を投げる
-        if (!sendMessage || !sendMessage.guildId) {
-          throw new Error("Failed to get deploy message result")
+    // チャンネルの必須項目がない場合は例外を投げる
+    if (!channelGuild || channelGuild.type !== ChannelType.GuildText) {
+      throw new Error("Failed to get channel")
+    }
+
+    // 時系列順にメッセージを作成するため、メッセージ作成処理は直列処理で実行
+    const newMessages: Message[] = []
+    for (const message of messages) {
+      const sendMessage = await channelGuild.send({
+        content: message.embeds ? undefined : message.content,
+        files: message.files,
+        embeds: message.embeds,
+      })
+
+      // メッセージの送信結果が取得できない場合は、例外を投げる
+      if (!sendMessage || !sendMessage.guildId) {
+        throw new Error("Failed to get deploy message result")
+      }
+
+      newMessages.push({
+        ...message,
+        ...{
+          id: sendMessage.id,
+          channel_id: sendMessage.channelId,
+          guild_id: sendMessage.guildId,
+          timestamp: sendMessage.createdTimestamp,
+          anthor: {
+            id: sendMessage.author.id,
+            name: sendMessage.author.username,
+            type: "bot",
+          },
+        },
+      })
+
+      // ピン留めアイテムの場合は、ピン留めする
+      if (message.is_pinned) {
+        const pinMessage = await sendMessage.pin()
+        if (!pinMessage || !pinMessage.guildId) {
+          throw new Error("Failed to pin message")
         }
 
+        // ピン留めアイテムの追加メッセージを追加
         newMessages.push({
           ...message,
           ...{
-            id: sendMessage.id,
-            channel_id: sendMessage.channelId,
-            guild_id: sendMessage.guildId,
-            timestamp: sendMessage.createdTimestamp,
+            id: pinMessage.id,
+            channel_id: pinMessage.channelId,
+            guild_id: pinMessage.guildId,
+            timestamp: pinMessage.createdTimestamp,
             anthor: {
-              id: sendMessage.author.id,
-              name: sendMessage.author.username,
+              id: pinMessage.author.id,
+              name: pinMessage.author.username,
               type: "bot",
             },
+            is_pinned: false,
           },
         })
-
-        // ピン留めアイテムの場合は、ピン留めする
-        if (message.is_pinned) {
-          const pinMessage = await sendMessage.pin()
-          if (!pinMessage || !pinMessage.guildId) {
-            throw new Error("Failed to pin message")
-          }
-
-          // ピン留めアイテムの追加メッセージを追加
-          newMessages.push({
-            ...message,
-            ...{
-              id: pinMessage.id,
-              channel_id: pinMessage.channelId,
-              guild_id: pinMessage.guildId,
-              timestamp: pinMessage.createdTimestamp,
-              anthor: {
-                id: pinMessage.author.id,
-                name: pinMessage.author.username,
-                type: "bot",
-              },
-              is_pinned: false,
-            },
-          })
-        }
       }
     }
 
@@ -501,8 +505,12 @@ export const deleteMessage = async (
     // メッセージを削除
     const channelGuild = discordClient.channels.cache.get(channelId)
     if (channelGuild && channelGuild.type === ChannelType.GuildText) {
-      for (const message of messages) {
-        if (message.id) {
+      await Promise.all(
+        messages.map(async (message) => {
+          // メッセージの必須項目がない場合は例外を投げる
+          if (message.id === undefined)
+            throw new Error("Message is missing a required parameter")
+
           try {
             // ピン留めアイテムの場合は、ピン留めを解除する
             if (message.is_pinned) {
@@ -516,8 +524,8 @@ export const deleteMessage = async (
               throw error
             }
           }
-        }
-      }
+        })
+      )
     }
 
     return {
