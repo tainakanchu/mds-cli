@@ -2,6 +2,7 @@ import { access, mkdir, writeFile, constants, readFile } from "node:fs/promises"
 import { dirname } from "node:path"
 import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClientType } from "discord.js"
+import retry from "async-retry"
 
 export interface Category {
   id: string
@@ -38,12 +39,12 @@ export const createCategoryFile = async (
 }
 
 /**
- * Create category
+ * Deploy category
  * @param discordClient
  * @param categories
  * @param distCategoryFilePath
  */
-export const createCategory = async (
+export const deployCategory = async (
   discordClient: DiscordClientType,
   categories: Category[],
   distCategoryFilePath: string
@@ -51,12 +52,20 @@ export const createCategory = async (
   // カテゴリーを作成する
   const newCategories = await Promise.all(
     categories.map(async (category) => {
-      const rusult = await discordClient.channels.create({
-        name: category.name,
-        type: ChannelType.GuildCategory,
-      })
+      const newCategory = await retry(
+        async () =>
+          await discordClient.channels.create({
+            name: category.name,
+            type: ChannelType.GuildCategory,
+          })
+      )
+
+      // カテゴリーの必須項目がない場合は例外を投げる
+      if (newCategory.id === undefined)
+        throw new Error("Failed to deploy category")
+
       return {
-        id: rusult?.id ? rusult.id : "",
+        id: newCategory.id,
         name: category.name,
       } as Category
     })
@@ -80,7 +89,9 @@ export const deleteCategory = async (
   await Promise.all(
     categories.map(async (category) => {
       try {
-        await discordClient.channels.delete(category.id)
+        await retry(async () => {
+          await discordClient.channels.delete(category.id)
+        })
       } catch (error) {
         if (error instanceof DiscordAPIError && error.code == 10003) {
           // 削除対象のカテゴリーが存在しないエラーの場合は、何もしない
