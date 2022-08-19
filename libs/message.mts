@@ -343,13 +343,13 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 }
 
 /**
- *  Create message
+ * Deploy message
  * @param discordClient
  * @param channelId
  * @param distMessageFilePath
  * @param messages
  */
-export const createMessage = async (
+export const deployMessage = async (
   discordClient: DiscordClientType,
   messages: Message[],
   channelId: string,
@@ -414,9 +414,9 @@ export const createMessage = async (
 }
 
 /**
- * Create all message
+ * Deploy all message
  */
-export const createAllMessage = async (
+export const deployAllMessage = async (
   discordClient: DiscordClientType,
   channels: Channel[]
 ): Promise<{
@@ -433,16 +433,16 @@ export const createAllMessage = async (
           if (getMessageFileResult.status === "failed") {
             throw new Error(getMessageFileResult.message)
           }
-          const createMessageResult = await createMessage(
+          const deployMessageResult = await deployMessage(
             discordClient,
             getMessageFileResult.messages,
             channel.discord.channel_id,
             messageFilePath
           )
-          if (createMessageResult.status === "failed") {
-            throw new Error(createMessageResult.message)
+          if (deployMessageResult.status === "failed") {
+            throw new Error(deployMessageResult.message)
           }
-          if (createMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
+          if (deployMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
             isMaxFileSizeOver = true
           }
         }

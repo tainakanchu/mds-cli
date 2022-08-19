@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { createChannel, getChannelFile } from "../../libs/channel.mjs"
+import { deployChannel, getChannelFile } from "../../libs/channel.mjs"
 import { createCategory } from "../../libs/category.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
@@ -104,9 +104,9 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルを作成する
-  spinner.loading("Create channel")
-  const createChannelResult = await createChannel(
+  // チャンネルをデプロイする
+  spinner.loading("Deploy channel")
+  const deployChannelResult = await deployChannel(
     discordClient,
     channels,
     distChannelFilePath,
@@ -114,8 +114,8 @@ interface Options {
     archiveCategory,
     migrateArchive
   )
-  if (createChannelResult.status === "failed") {
-    spinner.failed(null, createChannelResult.message)
+  if (deployChannelResult.status === "failed") {
+    spinner.failed(null, deployChannelResult.message)
     process.exit(0)
   }
   spinner.success()

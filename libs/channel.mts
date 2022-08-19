@@ -161,7 +161,7 @@ export const buildChannelFile = async (
 }
 
 /**
- * Create channel
+ * Deploy channel
  * @param discordClient
  * @param channels
  * @param distChannelFilePath
@@ -169,7 +169,7 @@ export const buildChannelFile = async (
  * @param archiveCategory
  * @param migrateArchive
  */
-export const createChannel = async (
+export const deployChannel = async (
   discordClient: DiscordClientType,
   channels: Channel[],
   distChannelFilePath: string,

@@ -4,7 +4,7 @@ import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
-import { createAllMessage } from "../../libs/message.mjs"
+import { deployAllMessage } from "../../libs/message.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
@@ -65,16 +65,16 @@ interface Options {
   }
   spinner.success()
 
-  // メッセージを作成する
-  spinner.loading("Create message")
-  const createAllMessageResult = await createAllMessage(discordClient, channels)
-  if (createAllMessageResult.status === "failed") {
-    spinner.failed(null, createAllMessageResult.message)
+  // メッセージをデプロイする
+  spinner.loading("Deploy message")
+  const deployAllMessageResult = await deployAllMessage(discordClient, channels)
+  if (deployAllMessageResult.status === "failed") {
+    spinner.failed(null, deployAllMessageResult.message)
     process.exit(0)
   }
   spinner.success()
   // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
-  if (createAllMessageResult.isMaxFileSizeOver) {
+  if (deployAllMessageResult.isMaxFileSizeOver) {
     spinner.warning(
       "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
     )
