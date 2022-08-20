@@ -31,24 +31,23 @@ export class ChannelClient {
 
     // チャンネルを変換
     const newChannels: SlackChannel[] = channels.map((channel) => {
-      const { id, name, topic, is_archived, pins } = channel
-
       // チャンネルの必須項目がない場合は例外を投げる
       if (
-        id === undefined ||
-        name === undefined ||
-        topic === undefined ||
-        is_archived === undefined
+        channel.id === undefined ||
+        channel.name === undefined ||
+        channel.topic === undefined ||
+        channel.is_archived === undefined
       )
         throw new Error("Channel is missing a required parameter")
 
       return {
-        id: id,
-        name: name,
+        id: 0,
+        channelId: channel.id,
+        name: channel.name,
         type: 1,
-        topic: topic.value,
-        is_archived: is_archived,
-        pins: pins?.map((pin) => pin.id).join(",") || null,
+        topic: channel.topic.value,
+        isArchived: channel.is_archived,
+        pins: channel.pins?.map((pin) => pin.id).join(",") || null,
       }
     })
 
@@ -77,22 +76,21 @@ export class ChannelClient {
     const query = channels.map((channel) =>
       this.client.slackChannel.upsert({
         where: {
-          id: channel.id,
+          channelId: channel.channelId,
         },
         update: {
-          id: channel.id,
           name: channel.name,
           type: channel.type,
           topic: channel.topic,
-          is_archived: channel.is_archived,
+          isArchived: channel.isArchived,
           pins: channel.pins,
         },
         create: {
-          id: channel.id,
+          channelId: channel.channelId,
           name: channel.name,
           type: channel.type,
           topic: channel.topic,
-          is_archived: channel.is_archived,
+          isArchived: channel.isArchived,
           pins: channel.pins,
         },
       })
