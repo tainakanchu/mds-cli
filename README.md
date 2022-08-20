@@ -49,14 +49,15 @@ flowchart LR
 npm run build
 # or
 npm run init
+npm run build:channel
 npm run build:user
 npm run build:message
-npm run deploy:channel
 
 # チャンネル、メッセージを作成する
 npm run deploy
 # or
 npm run deploy:channel
+npm run deploy:user
 npm run deploy:message
 ```
 
@@ -66,8 +67,9 @@ npm run deploy:message
 # チャンネル、メッセージを削除する
 npm run destroy
 # or
-npm run destroy:channel
+npm run destroy:user
 npm run destroy:message
+npm run destroy:channel
 ```
 
 ## License

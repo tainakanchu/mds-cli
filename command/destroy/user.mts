@@ -1,19 +1,16 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
+import prompts from "prompts"
 import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { deployAllMessage } from "../../libs/message.mjs"
-import { getUserFile } from "../../libs/user.mjs"
-import type { User } from "../../libs/user.mjs"
+import { deleteChannel, getChannelFile } from "../../libs/channel.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
 const distChannelFilePath = join(distDirPath, "channel.json")
-const distUserFilePath = join(distDirPath, "user.json")
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
@@ -24,9 +21,17 @@ interface Options {
 }
 
 ;(async () => {
+  // コマンドの実行確認
+  const confirm = await prompts({
+    type: "confirm",
+    name: "value",
+    message: "Delete user image host channel?",
+  })
+  if (!confirm.value) process.exit(0)
+
   const program = new Command()
   program
-    .description("Deploy message command")
+    .description("Delete user image host channel command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -61,7 +66,7 @@ interface Options {
   spinner.success()
 
   // チャンネルを取得する
-  spinner.loading("Get channel")
+  spinner.loading("Get user image host channel")
   let channels: Channel[] | null = null
   try {
     channels = await getChannelFile(distChannelFilePath)
@@ -69,41 +74,26 @@ interface Options {
     spinner.failed(null, error)
     process.exit(0)
   }
+
+  // ユーザーの画像をホストしているチャンネルを取得する
+  const userChannel = channels.find(
+    (channel) => channel.type === "user_image_host"
+  )
+  if (userChannel === undefined) {
+    spinner.failed(null, "Faied to get user image host channel")
+    process.exit(0)
+  }
   spinner.success()
 
-  // ユーザーを取得する
-  spinner.loading("Get user")
-  let users: User[] | null = null
+  // ユーザーの画像をホストしているチャンネルを削除する
+  spinner.loading("Delete user image host channel")
   try {
-    users = await getUserFile(distUserFilePath)
+    await deleteChannel(discordClient, [userChannel])
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
-
-  // メッセージをデプロイする
-  spinner.loading("Deploy message")
-  let isMaxFileSizeOver = false
-  try {
-    const deployAllMessageResult = await deployAllMessage(
-      discordClient,
-      channels,
-      users
-    )
-    if (deployAllMessageResult.isMaxFileSizeOver) isMaxFileSizeOver = true
-  } catch (error) {
-    spinner.failed(null, error)
-    process.exit(0)
-  }
-  spinner.success()
-
-  // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
-  if (isMaxFileSizeOver) {
-    spinner.warning(
-      "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
-    )
-  }
 
   process.exit(0)
 })()
