@@ -37,7 +37,7 @@ export interface Message {
   }
   timestamp?: number
   is_pinned: boolean
-  slack: {
+  src: {
     anthor: {
       id: string
       name: string
@@ -116,9 +116,9 @@ export const buildMessageFile = async (
         mention.replace(/<@|>/g, "")
       )
       for (const userId of userIds) {
-        const user = users.find((user) => user.slack.id === userId)
-        if (user && user.slack.name) {
-          content = content.replaceAll(`<@${userId}>`, `@${user.slack.name}`)
+        const user = users.find((user) => user.src.id === userId)
+        if (user && user.src.name) {
+          content = content.replaceAll(`<@${userId}>`, `@${user.src.name}`)
         } else {
           // usersにないメンションは、APIから取得する
           const username = await getUsername(slackClient, userId)
@@ -164,25 +164,24 @@ export const buildMessageFile = async (
     // メッセージの送信者情報を取得
     let user = users.find(
       (user) =>
-        user.slack.id === message.user ||
-        user.slack.bot?.app_id === message.app_id
+        user.src.id === message.user || user.src.bot?.app_id === message.app_id
     )
     // メッセージの送信者情報が取得できない場合は、APIから取得
     if (!user) {
       if (message.user) user = await getUser(slackClient, message.user)
       if (!user) throw new Error("Failed to get user for message")
     }
-    const anthor: Message["slack"]["anthor"] = {
-      id: user.slack.id,
-      name: user.slack.name,
+    const anthor: Message["src"]["anthor"] = {
+      id: user.src.id,
+      name: user.src.name,
       type: message.bot_id
         ? "bot"
-        : user.slack.is_deleted
+        : user.src.is_deleted
         ? "cancel-user"
         : "active-user",
-      color: user.slack.color,
-      type_icon: message.bot_id ? "🤖" : user.slack.is_deleted ? "🔵" : "🟢",
-      image_url: user.discord.image_url,
+      color: user.src.color,
+      type_icon: message.bot_id ? "🤖" : user.src.is_deleted ? "🔵" : "🟢",
+      image_url: user.image_url,
     }
 
     // メッセージの投稿日時を算出
@@ -208,7 +207,7 @@ export const buildMessageFile = async (
         },
       ],
       is_pinned: isPinned,
-      slack: {
+      src: {
         anthor: anthor,
         timestamp: message.ts,
       },
@@ -228,7 +227,7 @@ export const buildMessageFile = async (
         content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
         files: uploadFileUrls?.length ? uploadFileUrls : undefined,
         is_pinned: isPinned,
-        slack: {
+        src: {
           anthor: anthor,
           timestamp: message.ts,
         },
@@ -259,17 +258,16 @@ export const buildAllMessageFile = async (
     channels.map(
       async (channel) =>
         await Promise.all(
-          channel.slack.message_file_paths.map(
+          channel.src.message_file_paths.map(
             async (srcMessageFilePath, index) => {
-              const distMessageFilePath =
-                channel.discord.message_file_paths[index]
+              const distMessageFilePath = channel.message_file_paths[index]
               const buildMessageFileResult = await buildMessageFile(
                 slackClient,
                 srcMessageFilePath,
                 distMessageFilePath,
                 users,
-                channel.slack.pin_ids,
-                channel.discord.guild.max_file_size
+                channel.src.pin_ids,
+                channel.guild.max_file_size
               )
               if (
                 buildMessageFileResult.isMaxFileSizeOver &&
@@ -329,8 +327,8 @@ export const deployMessage = async (
 
     // メッセージの送信者の画像URLを取得
     const anthorImageUrl = users.find(
-      (user) => user.slack.id === message.slack.anthor.id
-    )?.discord.image_url
+      (user) => user.src.id === message.src.anthor.id
+    )?.image_url
     if (anthorImageUrl === undefined)
       throw new Error("Failed to get anchor image url")
 
@@ -422,9 +420,7 @@ export const deployAllMessage = async (
   await Promise.all(
     channels.map(async (channel) => {
       // チャンネルギルドを作成
-      const channelGuild = discordClient.channels.cache.get(
-        channel.discord.channel_id
-      )
+      const channelGuild = discordClient.channels.cache.get(channel.id)
       if (
         channelGuild === undefined ||
         channelGuild.type !== ChannelType.GuildText
@@ -432,7 +428,7 @@ export const deployAllMessage = async (
         throw new Error("Failed to get channel guild")
       }
 
-      for (const messageFilePath of channel.discord.message_file_paths) {
+      for (const messageFilePath of channel.message_file_paths) {
         const messages = await getMessageFile(messageFilePath)
         const deployMessageResult = await deployMessage(
           channelGuild,
@@ -494,9 +490,7 @@ export const deleteAllMessage = async (
   await Promise.all(
     channels.map(async (channel) => {
       // チャンネルギルドを作成
-      const channelGuild = discordClient.channels.cache.get(
-        channel.discord.channel_id
-      )
+      const channelGuild = discordClient.channels.cache.get(channel.id)
       if (
         channelGuild === undefined ||
         channelGuild.type !== ChannelType.GuildText
@@ -505,7 +499,7 @@ export const deleteAllMessage = async (
       }
 
       await Promise.all(
-        channel.discord.message_file_paths.map(async (messageFilePath) => {
+        channel.message_file_paths.map(async (messageFilePath) => {
           const messages = await getMessageFile(messageFilePath)
           await deleteMessage(channelGuild, messages)
         })

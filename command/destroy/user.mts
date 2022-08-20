@@ -77,7 +77,7 @@ interface Options {
 
   // ユーザーの画像をホストしているチャンネルを取得する
   const userChannel = channels.find(
-    (channel) => channel.discord.channel_type === "user_image_host"
+    (channel) => channel.type === "user_image_host"
   )
   if (userChannel === undefined) {
     spinner.failed(null, "Faied to get user image host channel")

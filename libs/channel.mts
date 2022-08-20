@@ -18,24 +18,22 @@ interface SlackChannel extends SlackBaseChannel {
 }
 
 export interface Channel {
-  slack: {
-    channel_id: string
-    channel_name: string
+  id: string
+  name: string
+  type: "default" | "user_image_host"
+  guild: {
+    boost_level: 0 | 1 | 2 | 3
+    boost_count: number
+    max_file_size: 8000000 | 50000000 | 100000000
+  }
+  topic: string
+  message_file_paths: string[]
+  src: {
+    id: string
+    name: string
     is_archived: boolean
     purpose: string
     pin_ids: string[]
-    message_file_paths: string[]
-  }
-  discord: {
-    channel_id: string
-    channel_name: string
-    channel_type: "default" | "user_image_host"
-    guild: {
-      boost_level: 0 | 1 | 2 | 3
-      boost_count: number
-      max_file_size: 8000000 | 50000000 | 100000000
-    }
-    topic: string
     message_file_paths: string[]
   }
 }
@@ -122,25 +120,23 @@ export const buildChannelFile = async (
           }
 
           const newChannel: Channel = {
-            slack: {
-              channel_id: channel.id,
-              channel_name: channel.name,
+            id: "",
+            name: channel.name,
+            type: "default",
+            guild: {
+              boost_level: 0,
+              boost_count: 0,
+              max_file_size: 8000000,
+            },
+            topic: channel.purpose?.value || "",
+            message_file_paths: distMessageFilePaths,
+            src: {
+              id: channel.id,
+              name: channel.name,
               is_archived: channel.is_archived,
               purpose: channel.purpose?.value || "",
               pin_ids: channel.pins?.map((pin) => pin.id) || [],
               message_file_paths: srcMessageFilePaths,
-            },
-            discord: {
-              channel_id: "",
-              channel_name: channel.name,
-              channel_type: "default",
-              guild: {
-                boost_level: 0,
-                boost_count: 0,
-                max_file_size: 8000000,
-              },
-              topic: channel.purpose?.value || "",
-              message_file_paths: distMessageFilePaths,
             },
           }
 
@@ -172,15 +168,15 @@ export const deployChannel = async (
   const newChannels = await Promise.all(
     channels
       // ユーザーの画像をホストしているチャンネルの作成は除外する
-      .filter((channel) => channel.discord.channel_type === "default")
+      .filter((channel) => channel.type === "default")
       .map(async (channel) => {
         const newChannel = await retry(
           async () =>
             await discordClient.channels.create({
-              name: channel.discord.channel_name,
+              name: channel.name,
               type: ChannelType.GuildText,
-              topic: channel.discord.topic ? channel.discord.topic : undefined,
-              parent: channel.slack.is_archived
+              topic: channel.topic ? channel.topic : undefined,
+              parent: channel.src.is_archived
                 ? archiveCategory.id
                 : defaultCategory.id,
             })
@@ -188,7 +184,7 @@ export const deployChannel = async (
 
         // サーバーブーストレベルとファイルサイズを算出する
         const boostCount = newChannel.guild.premiumSubscriptionCount || 0
-        let boostLevel: Channel["discord"]["guild"]["boost_level"] = 0
+        let boostLevel: Channel["guild"]["boost_level"] = 0
         if (boostCount >= 2 && boostCount < 7) {
           boostLevel = 1
         } else if (boostCount >= 7 && boostCount < 14) {
@@ -196,7 +192,7 @@ export const deployChannel = async (
         } else if (boostCount >= 14) {
           boostLevel = 3
         }
-        let maxFileSize: Channel["discord"]["guild"]["max_file_size"] = 8000000
+        let maxFileSize: Channel["guild"]["max_file_size"] = 8000000
         if (boostLevel === 2) {
           maxFileSize = 50000000
         } else if (boostLevel === 3) {
@@ -206,18 +202,16 @@ export const deployChannel = async (
         return {
           ...channel,
           ...({
-            discord: {
-              channel_id: newChannel.id,
-              channel_name: channel.discord.channel_name,
-              channel_type: "default",
-              guild: {
-                boost_level: boostLevel,
-                boost_count: boostCount,
-                max_file_size: maxFileSize,
-              },
-              topic: channel.discord.topic,
-              message_file_paths: channel.discord.message_file_paths,
+            id: newChannel.id,
+            name: channel.name,
+            type: "default",
+            guild: {
+              boost_level: boostLevel,
+              boost_count: boostCount,
+              max_file_size: maxFileSize,
             },
+            topic: channel.topic,
+            message_file_paths: channel.message_file_paths,
           } as Channel),
         }
       })
@@ -242,7 +236,7 @@ export const deleteChannel = async (
     channels.map(async (channel) => {
       try {
         await retry(async () => {
-          await discordClient.channels.delete(channel.discord.channel_id)
+          await discordClient.channels.delete(channel.id)
         })
       } catch (error) {
         if (error instanceof DiscordAPIError && error.code == 10003) {

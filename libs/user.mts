@@ -9,7 +9,10 @@ import { createChannelFile } from "./channel.mjs"
 import type { Channel } from "./channel.mjs"
 
 export interface User {
-  slack: {
+  id: string
+  name: string
+  image_url: string
+  src: {
     id: string
     name: string
     color: string | "808080"
@@ -20,11 +23,6 @@ export interface User {
       id?: string
       app_id?: string
     }
-  }
-  discord: {
-    id: string
-    name: string
-    image_url: string
   }
 }
 
@@ -61,7 +59,10 @@ export const getUser = async (
     : undefined
 
   const user: User = {
-    slack: {
+    id: "",
+    name: "",
+    image_url: "",
+    src: {
       id: result.user.id,
       name: result.user.name,
       color: result.user.color,
@@ -69,11 +70,6 @@ export const getUser = async (
       is_bot: result.user.is_bot,
       is_deleted: result.user.deleted,
       bot: bot,
-    },
-    discord: {
-      id: "",
-      name: "",
-      image_url: "",
     },
   }
 
@@ -152,12 +148,15 @@ export const buildUser = async (
       : user.profile?.display_name
 
     // ユーザーがBotの場合はBot情報を取得
-    const bot: User["slack"]["bot"] = user.is_bot
+    const bot: User["src"]["bot"] = user.is_bot
       ? { id: user.profile?.bot_id, app_id: user.profile?.api_app_id }
       : undefined
 
     const newUser: User = {
-      slack: {
+      id: "",
+      name: name,
+      image_url: "",
+      src: {
         id: user.id,
         name: name,
         is_bot: user.is_bot,
@@ -165,11 +164,6 @@ export const buildUser = async (
         color: user.color || "808080",
         image_url: user.profile.image_512,
         bot: bot,
-      },
-      discord: {
-        id: "",
-        name: name,
-        image_url: "",
       },
     }
 
@@ -209,14 +203,14 @@ export const deployUserImage = async (
   const newUsers: User[] = []
   for (const user of users) {
     const message = await userChannel.send({
-      content: user.slack.name,
-      files: [user.slack.image_url],
+      content: user.src.name,
+      files: [user.src.image_url],
     })
 
     // 画像のリンクを取得
     const imageUrl = message.attachments.map((file) => file.url)[0]
     const newUser = (() => user)()
-    newUser.discord.image_url = imageUrl
+    newUser.image_url = imageUrl
 
     newUsers.push(newUser)
   }
@@ -229,24 +223,22 @@ export const deployUserImage = async (
     ...channels,
     ...([
       {
-        slack: {
-          channel_id: "",
-          channel_name: "",
+        id: userChannel.id,
+        name: userChannel.name,
+        type: "user_image_host",
+        guild: {
+          boost_level: 0,
+          boost_count: 0,
+          max_file_size: 8000000,
+        },
+        topic: "",
+        message_file_paths: [],
+        src: {
+          id: "",
+          name: "",
           is_archived: true,
           purpose: "",
           pin_ids: [],
-          message_file_paths: [],
-        },
-        discord: {
-          channel_id: userChannel.id,
-          channel_name: userChannel.name,
-          channel_type: "user_image_host",
-          guild: {
-            boost_level: 0,
-            boost_count: 0,
-            max_file_size: 8000000,
-          },
-          topic: "",
           message_file_paths: [],
         },
       },
