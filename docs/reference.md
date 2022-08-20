@@ -16,3 +16,5 @@
 - [DiscordのID直打ちでのリンクの書き方と文字装飾](https://qiita.com/Mijinko/items/df3d2e1f90dbed5a4019)
 - [メッセージの書式設定を行う](https://slack.com/intl/ja-jp/help/articles/360039953113-%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%81%AE%E6%9B%B8%E5%BC%8F%E8%A8%AD%E5%AE%9A%E3%82%92%E8%A1%8C%E3%81%86)
 - [Discord Embed Builder]([Discord Embed Builder](https://autocode.com/tools/discord/embed-builder/))
+- [Prisma](https://www.prisma.io/)
+- [Prisma SQLite](https://www.prisma.io/docs/concepts/database-connectors/sqlite)
