@@ -1,0 +1,45 @@
+import { Command } from "commander"
+import dotenv from "dotenv"
+import { resolve, join } from "node:path"
+import { Spinner } from "../../libs/util/spinner.mjs"
+import { ChannelClient } from "../../libs/channel2.mjs"
+
+const __dirname = new URL(import.meta.url).pathname
+const srcDirPath = resolve(__dirname, "../../../.src/")
+const channelFilePath = join(srcDirPath, "channels.json")
+
+dotenv.config({ path: "./.env" })
+const spinner = new Spinner()
+
+;(async () => {
+  const program = new Command()
+  program
+    .description("Migrate channel data command")
+    .requiredOption(
+      "-ma, --migrate-archive [boolean]",
+      "Whether to migrate archive channel",
+      process.env.MIGRATE_ARCHIVE === "true" ? true : false
+    )
+    .parse(process.argv)
+
+  // クライアントを作成
+  spinner.loading("Create client")
+  let channelClient: ChannelClient | undefined = undefined
+  try {
+    channelClient = new ChannelClient()
+  } catch (error) {
+    spinner.failed(null, error)
+    process.exit(1)
+  }
+  spinner.success()
+
+  // チャンネルのデータを移行する
+  spinner.loading("Migrate channel data")
+  try {
+    await channelClient.migrateChannel(channelFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
+    process.exit(1)
+  }
+  spinner.success()
+})()

@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SlackChannel {
+  id          String  @id
+  name        String
+  type        Int
+  topic       String
+  is_archived Boolean
+  pins        String?
+}

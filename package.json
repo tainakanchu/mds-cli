@@ -7,6 +7,8 @@
   "type": "module",
   "scripts": {
     "init": "node --loader ts-node/esm ./command/init.mts",
+    "migrate": "run-s migrate:*",
+    "migrate:channel": "node --loader ts-node/esm ./command/migrate/channel.mts",
     "build": "run-s init build:*",
     "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
     "build:user": "node --loader ts-node/esm ./command/build/user.mts",
@@ -20,7 +22,8 @@
     "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
     "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel.mts",
     "start": "run-s build deploy",
-    "update": "npx ncu -u && npm install"
+    "update": "npx ncu -u && npm install",
+    "prisma": "yes | npx prisma migrate dev --name init && npx prisma migrate dev"
   },
   "volta": {
     "node": "18.7.0",
