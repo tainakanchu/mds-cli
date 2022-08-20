@@ -6,13 +6,15 @@ import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { getChannelFile } from "../../libs/channel.mjs"
 import type { Channel } from "../../libs/channel.mjs"
-import { deployAllMessage } from "../../libs/message.mjs"
-import { getUserFile } from "../../libs/user.mjs"
+import { getCategoryFile } from "../../libs/category.mjs"
+import type { Category } from "../../libs/category.mjs"
+import { deployUserImage, getUserFile } from "../../libs/user.mjs"
 import type { User } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const distDirPath = resolve(__dirname, "../../../.dist/")
 const distChannelFilePath = join(distDirPath, "channel.json")
+const distCategoryFilePath = join(distDirPath, "category.json")
 const distUserFilePath = join(distDirPath, "user.json")
 
 dotenv.config({ path: "./.env" })
@@ -26,7 +28,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Deploy message command")
+    .description("Deploy user image command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -71,6 +73,27 @@ interface Options {
   }
   spinner.success()
 
+  // カテゴリーを取得する
+  spinner.loading("Get category")
+  let categories: Category[] | null = null
+  try {
+    categories = await getCategoryFile(distCategoryFilePath)
+  } catch (error) {
+    spinner.failed(null, error)
+    process.exit(0)
+  }
+  spinner.success()
+
+  // アーカイブカテゴリーを取得する
+  const archiveCategory = categories.find(
+    (category) => category.name === "ARCHIVE"
+  )
+  if (!archiveCategory) {
+    spinner.failed(null, "Failed to get archive category")
+    process.exit(0)
+  }
+  spinner.success()
+
   // ユーザーを取得する
   spinner.loading("Get user")
   let users: User[] | null = null
@@ -82,28 +105,22 @@ interface Options {
   }
   spinner.success()
 
-  // メッセージをデプロイする
-  spinner.loading("Deploy message")
-  let isMaxFileSizeOver = false
+  // ユーザーの画像をデプロイする
+  spinner.loading("Deploy user image")
   try {
-    const deployAllMessageResult = await deployAllMessage(
+    await deployUserImage(
       discordClient,
+      distChannelFilePath,
       channels,
+      archiveCategory.id,
+      distUserFilePath,
       users
     )
-    if (deployAllMessageResult.isMaxFileSizeOver) isMaxFileSizeOver = true
   } catch (error) {
     spinner.failed(null, error)
     process.exit(0)
   }
   spinner.success()
-
-  // メッセージに最大ファイルサイズを超えているファイルがある場合は警告を出力する
-  if (isMaxFileSizeOver) {
-    spinner.warning(
-      "Message has attachments that exceed Discord's maximum file size.\nAttachments that exceed Discord's maximum file size will be appended to the message as a file URL.\nConsider releasing the maximum file upload size limit with Discord's server boost."
-    )
-  }
 
   process.exit(0)
 })()

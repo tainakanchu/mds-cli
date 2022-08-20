@@ -29,6 +29,7 @@ export interface Channel {
   discord: {
     channel_id: string
     channel_name: string
+    channel_type: "default" | "user_image_host"
     guild: {
       boost_level: 0 | 1 | 2 | 3
       boost_count: number
@@ -132,6 +133,7 @@ export const buildChannelFile = async (
             discord: {
               channel_id: "",
               channel_name: channel.name,
+              channel_type: "default",
               guild: {
                 boost_level: 0,
                 boost_count: 0,
@@ -168,53 +170,57 @@ export const deployChannel = async (
 ): Promise<Channel[]> => {
   // チャンネルを作成する
   const newChannels = await Promise.all(
-    channels.map(async (channel) => {
-      const newChannel = await retry(
-        async () =>
-          await discordClient.channels.create({
-            name: channel.discord.channel_name,
-            type: ChannelType.GuildText,
-            topic: channel.discord.topic ? channel.discord.topic : undefined,
-            parent: channel.slack.is_archived
-              ? archiveCategory.id
-              : defaultCategory.id,
-          })
-      )
+    channels
+      // ユーザーの画像をホストしているチャンネルの作成は除外する
+      .filter((channel) => channel.discord.channel_type === "default")
+      .map(async (channel) => {
+        const newChannel = await retry(
+          async () =>
+            await discordClient.channels.create({
+              name: channel.discord.channel_name,
+              type: ChannelType.GuildText,
+              topic: channel.discord.topic ? channel.discord.topic : undefined,
+              parent: channel.slack.is_archived
+                ? archiveCategory.id
+                : defaultCategory.id,
+            })
+        )
 
-      // サーバーブーストレベルとファイルサイズを算出する
-      const boostCount = newChannel.guild.premiumSubscriptionCount || 0
-      let boostLevel: Channel["discord"]["guild"]["boost_level"] = 0
-      if (boostCount >= 2 && boostCount < 7) {
-        boostLevel = 1
-      } else if (boostCount >= 7 && boostCount < 14) {
-        boostLevel = 2
-      } else if (boostCount >= 14) {
-        boostLevel = 3
-      }
-      let maxFileSize: Channel["discord"]["guild"]["max_file_size"] = 8000000
-      if (boostLevel === 2) {
-        maxFileSize = 50000000
-      } else if (boostLevel === 3) {
-        maxFileSize = 100000000
-      }
+        // サーバーブーストレベルとファイルサイズを算出する
+        const boostCount = newChannel.guild.premiumSubscriptionCount || 0
+        let boostLevel: Channel["discord"]["guild"]["boost_level"] = 0
+        if (boostCount >= 2 && boostCount < 7) {
+          boostLevel = 1
+        } else if (boostCount >= 7 && boostCount < 14) {
+          boostLevel = 2
+        } else if (boostCount >= 14) {
+          boostLevel = 3
+        }
+        let maxFileSize: Channel["discord"]["guild"]["max_file_size"] = 8000000
+        if (boostLevel === 2) {
+          maxFileSize = 50000000
+        } else if (boostLevel === 3) {
+          maxFileSize = 100000000
+        }
 
-      return {
-        ...channel,
-        ...{
-          discord: {
-            channel_id: newChannel.id,
-            channel_name: channel.discord.channel_name,
-            guild: {
-              boost_level: boostLevel,
-              boost_count: boostCount,
-              max_file_size: maxFileSize,
+        return {
+          ...channel,
+          ...({
+            discord: {
+              channel_id: newChannel.id,
+              channel_name: channel.discord.channel_name,
+              channel_type: "default",
+              guild: {
+                boost_level: boostLevel,
+                boost_count: boostCount,
+                max_file_size: maxFileSize,
+              },
+              topic: channel.discord.topic,
+              message_file_paths: channel.discord.message_file_paths,
             },
-            topic: channel.discord.topic,
-            message_file_paths: channel.discord.message_file_paths,
-          },
-        },
-      }
-    })
+          } as Channel),
+        }
+      })
   )
 
   // チャンネルファイルを更新する

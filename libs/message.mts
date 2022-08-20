@@ -182,7 +182,7 @@ export const buildMessageFile = async (
         : "active-user",
       color: user.slack.color,
       type_icon: message.bot_id ? "🤖" : user.slack.is_deleted ? "🔵" : "🟢",
-      image_url: user.slack.image_url,
+      image_url: user.discord.image_url,
     }
 
     // メッセージの投稿日時を算出
@@ -307,13 +307,15 @@ export const getMessageFilePaths = async (messageDirPath: string) => {
 /**
  * Deploy message
  * @param channelGuild
- * @param distMessageFilePath
  * @param messages
+ * @param distMessageFilePath
+ * @para, users
  */
 export const deployMessage = async (
   channelGuild: TextChannel,
   messages: Message[],
-  distMessageFilePath: string
+  distMessageFilePath: string,
+  users: User[]
 ): Promise<{
   messages: Message[]
   isMaxFileSizeOver?: boolean
@@ -322,6 +324,23 @@ export const deployMessage = async (
   const newMessages: Message[] = []
   let isMaxFileSizeOver = false
   for (const message of messages) {
+    // システムメッセージはメッセージを作成しないように除外する
+    if (message.type !== "default") continue
+
+    // メッセージの送信者の画像URLを取得
+    const anthorImageUrl = users.find(
+      (user) => user.slack.id === message.slack.anthor.id
+    )?.discord.image_url
+    if (anthorImageUrl === undefined)
+      throw new Error("Failed to get anchor image url")
+
+    //メッセージに送信者の画像URLを設定
+    const embeds = message.embeds
+    if (embeds && embeds[0].author) {
+      embeds[0].author.icon_url = anthorImageUrl
+    }
+
+    // メッセージを作成
     const sendMessage = await retry(
       async () =>
         await channelGuild.send({
@@ -336,15 +355,13 @@ export const deployMessage = async (
       throw new Error("Failed to get deploy message result")
     }
 
-    // システムメッセージはメッセージを作成しないように除外する
-    if (message.type !== "default") continue
-
     newMessages.push({
       ...message,
       ...{
         id: sendMessage.id,
         channel_id: sendMessage.channelId,
         guild_id: sendMessage.guildId,
+        embeds: embeds,
         timestamp: sendMessage.createdTimestamp,
         anthor: {
           id: sendMessage.author.id,
@@ -369,6 +386,7 @@ export const deployMessage = async (
           types: "pin_message",
           channel_id: pinMessage.channelId,
           guild_id: pinMessage.guildId,
+          embeds: embeds,
           timestamp: pinMessage.createdTimestamp,
           anthor: {
             id: pinMessage.author.id,
@@ -395,7 +413,8 @@ export const deployMessage = async (
  */
 export const deployAllMessage = async (
   discordClient: DiscordClientType,
-  channels: Channel[]
+  channels: Channel[],
+  users: User[]
 ): Promise<{
   isMaxFileSizeOver?: boolean
 }> => {
@@ -418,7 +437,8 @@ export const deployAllMessage = async (
         const deployMessageResult = await deployMessage(
           channelGuild,
           messages,
-          messageFilePath
+          messageFilePath,
+          users
         )
         if (deployMessageResult.isMaxFileSizeOver && !isMaxFileSizeOver) {
           isMaxFileSizeOver = true
