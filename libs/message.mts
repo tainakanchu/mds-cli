@@ -20,13 +20,18 @@ import type { Channel } from "./channel.mjs"
 
 export interface SlackMessage extends SlackBaseMessage {
   files?: FileElement[]
+  replies?: {
+    user: string
+    ts: string
+  }[]
 }
 
 export interface Message {
   id?: string
-  type: "default" | "pin_message"
+  type: "default" | "pin_message" | "reply_message"
   channel_id?: string
   guild_id?: string
+  is_pinned: boolean
   content?: string
   embeds?: Embed[]
   files?: string[]
@@ -36,8 +41,11 @@ export interface Message {
     type: "bot"
   }
   timestamp?: number
-  is_pinned: boolean
   src: {
+    replies?: {
+      user_id: string
+      timestamp: string
+    }[]
     anthor: {
       id: string
       name: string
@@ -107,9 +115,10 @@ export const buildMessageFile = async (
       throw new Error("Message is missing a required parameter")
     }
 
-    let content = message.text
+    // TODO: ここにメッセージがリプライメッセージか判別する処理を書く
 
     // メッセージ内のユーザー名もしくはBot名のメンションを、Discordでメンションされない形式に置換
+    let content = message.text
     const matchMention = content.match(/<@U[A-Z0-9]{10}>/g)
     if (matchMention?.length) {
       const userIds = matchMention.map((mention) =>
@@ -171,6 +180,15 @@ export const buildMessageFile = async (
       if (message.user) user = await getUser(slackClient, message.user)
       if (!user) throw new Error("Failed to get user for message")
     }
+
+    // リプライメッセージがある場合、その情報を取得
+    const replies: Message["src"]["replies"] = message.replies?.map(
+      (reply) => ({
+        user_id: reply.user,
+        timestamp: reply.ts,
+      })
+    )
+
     const anthor: Message["src"]["anthor"] = {
       id: user.src.id,
       name: user.src.name,
@@ -193,6 +211,7 @@ export const buildMessageFile = async (
 
     newMessages.push({
       type: "default",
+      is_pinned: isPinned,
       content: content,
       embeds: [
         {
@@ -206,8 +225,8 @@ export const buildMessageFile = async (
           },
         },
       ],
-      is_pinned: isPinned,
       src: {
+        replies: replies,
         anthor: anthor,
         timestamp: message.ts,
       },
@@ -224,9 +243,9 @@ export const buildMessageFile = async (
       // 埋め込みの下に添付ファイルが表示されるように、添付ファイルは別メッセージにする
       newMessages.push({
         type: "default",
+        is_pinned: isPinned,
         content: sizeOverFileUrls ? sizeOverFileUrls?.join("\n") : "",
         files: uploadFileUrls?.length ? uploadFileUrls : undefined,
-        is_pinned: isPinned,
         src: {
           anthor: anthor,
           timestamp: message.ts,
@@ -323,7 +342,7 @@ export const deployMessage = async (
   let isMaxFileSizeOver = false
   for (const message of messages) {
     // システムメッセージはメッセージを作成しないように除外する
-    if (message.type !== "default") continue
+    if (message.type === "pin_message") continue
 
     // メッセージの送信者の画像URLを取得
     const anthorImageUrl = users.find(
@@ -384,6 +403,7 @@ export const deployMessage = async (
           types: "pin_message",
           channel_id: pinMessage.channelId,
           guild_id: pinMessage.guildId,
+          is_pinned: false,
           embeds: embeds,
           timestamp: pinMessage.createdTimestamp,
           anthor: {
@@ -391,7 +411,6 @@ export const deployMessage = async (
             name: pinMessage.author.username,
             type: "bot",
           },
-          is_pinned: false,
         },
       })
     }
