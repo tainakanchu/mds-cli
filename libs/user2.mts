@@ -31,7 +31,7 @@ export class UserClient {
     const slackUsers = await this.getSlackUserFile(userFilePath)
 
     // Convert slack user data
-    const newSlackUsers: SlackUser[] = slackUsers.map((user) => {
+    const newSlackUsers = slackUsers.map((user) => {
       if (
         user.id === undefined ||
         user.is_bot === undefined ||
@@ -51,7 +51,9 @@ export class UserClient {
         imageUrl: user.profile.image_512,
         isBot: user.is_bot,
         isDeleted: user.deleted,
-      }
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as SlackUser
     })
 
     // Update slack user data
@@ -70,7 +72,7 @@ export class UserClient {
   }
 
   /**
-   * Update many slack user
+   * Update many slack user data
    * @param users
    */
   async updateManySlackUser(users: SlackUser[]) {
@@ -94,6 +96,8 @@ export class UserClient {
           imageUrl: user.imageUrl,
           isBot: user.isBot,
           isDeleted: user.isDeleted,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
         },
       })
     )

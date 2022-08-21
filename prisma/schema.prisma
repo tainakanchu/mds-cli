@@ -16,6 +16,8 @@ model SlackChannel {
   isArchived      Boolean
   pins            String?
   discordChannels DiscordChannel[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
 }
 
 model DiscordChannel {
@@ -28,6 +30,8 @@ model DiscordChannel {
   isArchived      Boolean
   slackChannel    SlackChannel    @relation(fields: [slackChannelId], references: [channelId])
   discordCategory DiscordCategory @relation(fields: [categoryId], references: [categoryId])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
 }
 
 model DiscordCategory {
@@ -35,14 +39,18 @@ model DiscordCategory {
   name            String
   categoryId      String           @unique
   discordChannels DiscordChannel[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
 }
 
 model SlackUser {
-  id        Int     @id @default(autoincrement())
-  userId    String  @unique
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique
   name      String
-  email     String? @unique
+  email     String?  @unique
   imageUrl  String
   isBot     Boolean
   isDeleted Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

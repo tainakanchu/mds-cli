@@ -34,7 +34,7 @@ export class ChannelClient {
     const slackChannels = await this.getSlackChannelFile(channelFilePath)
 
     // Convert slack channel data
-    const newSlackChannels: SlackChannel[] = slackChannels.map((channel) => {
+    const newSlackChannels = slackChannels.map((channel) => {
       if (
         channel.id === undefined ||
         channel.name === undefined ||
@@ -51,7 +51,9 @@ export class ChannelClient {
         topic: channel.topic.value,
         isArchived: channel.is_archived,
         pins: channel.pins?.map((pin) => pin.id).join(",") || null,
-      }
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as SlackChannel
     })
 
     // Update slack channel data
@@ -99,7 +101,9 @@ export class ChannelClient {
           slackChannelId: channel.channelId,
           topic: result.topic,
           isArchived: channel.isArchived,
-        }
+          createdAt: result.createdAt,
+          updatedAt: result.createdAt,
+        } as DiscordChannel
       })
     )
 
@@ -173,6 +177,8 @@ export class ChannelClient {
           topic: channel.topic,
           isArchived: channel.isArchived,
           pins: channel.pins,
+          createdAt: channel.createdAt,
+          updatedAt: channel.updatedAt,
         },
       })
     )
@@ -180,7 +186,7 @@ export class ChannelClient {
   }
 
   /**
-   * Update many discord channel
+   * Update many discord channel data
    * @param channels
    */
   async updateManyDiscordChannel(channels: DiscordChannel[]) {
@@ -204,6 +210,8 @@ export class ChannelClient {
           slackChannelId: channel.slackChannelId,
           topic: channel.topic,
           isArchived: channel.isArchived,
+          createdAt: channel.createdAt,
+          updatedAt: channel.updatedAt,
         },
       })
     )

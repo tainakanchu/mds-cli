@@ -19,8 +19,8 @@ export class CategoryClient {
     discordClient: DiscordClient,
     categoryNames: string[]
   ) {
-    // Create discord category
-    const discordCategories: DiscordCategory[] = await Promise.all(
+    // Create many discord category
+    const discordCategories = await Promise.all(
       categoryNames.map(async (categoryName) => {
         const newCategory = await retry(
           async () =>
@@ -33,11 +33,13 @@ export class CategoryClient {
           id: 0,
           categoryId: newCategory.id,
           name: newCategory.name,
-        }
+          createdAt: newCategory.createdAt,
+          updatedAt: newCategory.createdAt,
+        } as DiscordCategory
       })
     )
 
-    // Update discord category data
+    // Update many discord category data
     await this.updateManyDiscordCategory(discordCategories)
 
     return discordCategories
@@ -82,10 +84,13 @@ export class CategoryClient {
         update: {
           categoryId: category.categoryId,
           name: category.name,
+          updatedAt: category.updatedAt,
         },
         create: {
           categoryId: category.categoryId,
           name: category.name,
+          createdAt: category.createdAt,
+          updatedAt: category.updatedAt,
         },
       })
     )
