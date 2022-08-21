@@ -101,8 +101,8 @@ export class CategoryClient {
    * Get single discord category data
    * @param categoryName
    */
-  getDiscordCategory(categoryName: string) {
-    return this.client.discordCategory.findFirst({
+  async getDiscordCategory(categoryName: string) {
+    return await this.client.discordCategory.findFirst({
       where: {
         name: categoryName,
       },

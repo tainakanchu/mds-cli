@@ -80,7 +80,7 @@ interface Options {
     (channel) => channel.type === "user_image_host"
   )
   if (userChannel === undefined) {
-    spinner.failed(null, "Faied to get user image host channel")
+    spinner.failed(null, "Failed to get user image host channel")
     process.exit(0)
   }
   spinner.success()

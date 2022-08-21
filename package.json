@@ -19,7 +19,7 @@
     "deploy:user": "node --loader ts-node/esm ./command/deploy/user2.mts",
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
     "destroy": "yes | run-s destroy:*",
-    "destroy:user": "node --loader ts-node/esm ./command/destroy/user.mts",
+    "destroy:user": "node --loader ts-node/esm ./command/destroy/user2.mts",
     "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
     "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel2.mts",
     "start": "run-s build deploy",

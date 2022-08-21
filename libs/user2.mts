@@ -1,8 +1,6 @@
 import { PrismaClient, SlackUser, DiscordUser } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
-import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
-import retry from "async-retry"
 import { ChannelClient } from "./channel2.mjs"
 
 interface SlackUserChannelFile {
@@ -141,10 +139,10 @@ export class UserClient {
   }
 
   /**
-   * Deploy all slack user image
+   * Deploy channel for hosting user image
    */
-  async deployAllSlackUserImage(discordClient: DiscordClient) {
-    // Deploy discord channel for uploading all slack user image
+  async deployUserImageChannel(discordClient: DiscordClient) {
+    // Deploy channel for hosting user image
     const channelClient = new ChannelClient(this.client)
     await channelClient.updateSlackChannel({
       id: 0,
@@ -196,5 +194,24 @@ export class UserClient {
 
     // Update discord user data
     await this.updateManyDiscordUser(discordUsers)
+  }
+
+  /**
+   * Destroy channel for hosting user image
+   */
+  async destroyUserImageChannel(discordClient: DiscordClient) {
+    //  Get channel for hosting user image
+    const channelClient = new ChannelClient(this.client)
+    const userChannel = await channelClient.getDiscordChannel("mds-user", 2)
+    if (!userChannel)
+      throw new Error("Failed to get channel for hosting user image")
+
+    // TODO: Destroy all message for channel for hosting user image
+
+    // Destroy channel for hosting user image
+    await channelClient.destroyDiscordChannel(
+      discordClient,
+      userChannel.channelId
+    )
   }
 }

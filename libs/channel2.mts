@@ -64,7 +64,6 @@ export class ChannelClient {
    * Deploy single discord channel
    * @param discordClient
    * @param channelName
-   * @param channelType
    * @param slackChannelId
    * @param option
    */
@@ -113,6 +112,31 @@ export class ChannelClient {
     await this.updateDiscordChannel(discordChannel)
 
     return result
+  }
+
+  /**
+   * Destroy single discord channel
+   * @param discordClient
+   * @param channelId
+   */
+  async destroyDiscordChannel(discordClient: DiscordClient, channelId: string) {
+    // Destroy discord channel
+    try {
+      await discordClient.channels.delete(channelId)
+    } catch (error) {
+      if (error instanceof DiscordAPIError && error.code == 10003) {
+        // Do not throw error if channel to be deleted does not exist
+      } else {
+        throw error
+      }
+    }
+
+    // Delete discord channel data
+    await this.client.discordChannel.delete({
+      where: {
+        channelId: channelId,
+      },
+    })
   }
 
   /**
@@ -224,6 +248,25 @@ export class ChannelClient {
     return JSON.parse(
       await readFile(channelFilePath, "utf8")
     ) as SlackChannelFile[]
+  }
+
+  /**
+   * Get single discord channel data
+   * @param channelName
+   * @param channelType
+   */
+  async getDiscordChannel(channelName: string, channelType?: 1 | 2) {
+    return await this.client.discordChannel.findFirst({
+      where: {
+        name: channelName,
+        type: channelType,
+      },
+      orderBy: [
+        {
+          updatedAt: "desc",
+        },
+      ],
+    })
   }
 
   /**

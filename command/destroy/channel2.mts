@@ -15,7 +15,6 @@ interface Options {
 }
 
 ;(async () => {
-  // コマンドの実行確認
   const confirm = await prompts({
     type: "confirm",
     name: "value",
@@ -38,7 +37,6 @@ interface Options {
     )
     .parse(process.argv)
 
-  // パラメーターの取得
   spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
@@ -48,7 +46,6 @@ interface Options {
   }
   spinner.success()
 
-  // クライアントを作成
   spinner.loading("Create client")
   let channelClient: ChannelClient | undefined = undefined
   let discordClient: DiscordClient | null = null
@@ -61,7 +58,6 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルを削除
   spinner.loading("Destroy discord channel")
   try {
     await channelClient.destroyAllDiscordChannel(discordClient)
