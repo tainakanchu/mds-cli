@@ -34,7 +34,7 @@ export class ChannelClient {
     const slackChannels = await this.getSlackChannelFile(channelFilePath)
 
     // Convert slack channel data
-    const newSlackChannels = slackChannels.map((channel) => {
+    const newSlackChannels: SlackChannel[] = slackChannels.map((channel) => {
       if (
         channel.id === undefined ||
         channel.name === undefined ||
@@ -53,7 +53,7 @@ export class ChannelClient {
         pins: channel.pins?.map((pin) => pin.id).join(",") || null,
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as SlackChannel
+      }
     })
 
     // Update slack channel data
@@ -61,11 +61,72 @@ export class ChannelClient {
   }
 
   /**
+   * Deploy single discord channel
+   * @param discordClient
+   * @param channelName
+   * @param channelType
+   * @param slackChannelId
+   * @param option
+   */
+  async deployDiscordChannel(
+    discordClient: DiscordClient,
+    channelName: string,
+    slackChannelId: string,
+    option: {
+      channelType: 1 | 2
+      topic?: string
+      isArchived: boolean
+    } = { channelType: 1, isArchived: false }
+  ) {
+    // Get discord category id
+    const categoryClient = new CategoryClient(this.client)
+    const category = option.isArchived
+      ? await categoryClient.getDiscordCategory("ARCHIVE")
+      : await categoryClient.getDiscordCategory("CHANNEL")
+    if (!category) throw new Error("Failed to get category")
+
+    // Deploy discord channel
+    const result = await retry(
+      async () =>
+        await discordClient.channels.create({
+          name: channelName,
+          type: ChannelType.GuildText,
+          topic: option.topic,
+          parent: category.categoryId,
+        })
+    )
+
+    const discordChannel: DiscordChannel = {
+      id: 0,
+      name: result.name,
+      channelId: result.id,
+      categoryId: category.categoryId,
+      slackChannelId: slackChannelId,
+      type: option.channelType,
+      topic: result.topic || null,
+      isArchived: option.isArchived,
+      createdAt: result.createdAt,
+      updatedAt: result.createdAt,
+    }
+
+    // Update discord channel data
+    await this.updateDiscordChannel(discordChannel)
+
+    return result
+  }
+
+  /**
    * Deploy all discord channel
    */
   async deployAllDiscordChannel(discordClient: DiscordClient) {
     // Get all slack channel data
-    const slackChannels = await this.client.slackChannel.findMany()
+    const slackChannels = await this.client.slackChannel.findMany({
+      where: {
+        type: {
+          equals: 1,
+        },
+      },
+    })
 
     // Deploy default category and archive category
     const categoryClient = new CategoryClient(this.client)
@@ -99,11 +160,12 @@ export class ChannelClient {
           channelId: result.id,
           categoryId: categoryId,
           slackChannelId: channel.channelId,
+          type: 1,
           topic: result.topic,
           isArchived: channel.isArchived,
           createdAt: result.createdAt,
           updatedAt: result.createdAt,
-        } as DiscordChannel
+        }
       })
     )
 
@@ -116,7 +178,13 @@ export class ChannelClient {
    */
   async destroyAllDiscordChannel(discordClient: DiscordClient) {
     // Get all discord channel data
-    const discordChannels = await this.client.discordChannel.findMany()
+    const discordChannels = await this.client.discordChannel.findMany({
+      where: {
+        type: {
+          equals: 1,
+        },
+      },
+    })
 
     // Destroy all discord channel
     await Promise.all(
@@ -134,7 +202,13 @@ export class ChannelClient {
     )
 
     // Delete all discord channel data
-    await this.client.discordChannel.deleteMany()
+    await this.client.discordChannel.deleteMany({
+      where: {
+        type: {
+          equals: 1,
+        },
+      },
+    })
 
     // Destroy all discord category
     const categoryClient = new CategoryClient(this.client)
@@ -150,6 +224,36 @@ export class ChannelClient {
     return JSON.parse(
       await readFile(channelFilePath, "utf8")
     ) as SlackChannelFile[]
+  }
+
+  /**
+   * Update single slack channel
+   * @param channel
+   */
+  async updateSlackChannel(channel: SlackChannel) {
+    await this.client.slackChannel.upsert({
+      where: {
+        channelId: channel.channelId,
+      },
+      update: {
+        channelId: channel.channelId,
+        name: channel.name,
+        type: channel.type,
+        topic: channel.topic,
+        isArchived: channel.isArchived,
+        pins: channel.pins,
+      },
+      create: {
+        channelId: channel.channelId,
+        name: channel.name,
+        type: channel.type,
+        topic: channel.topic,
+        isArchived: channel.isArchived,
+        pins: channel.pins,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt,
+      },
+    })
   }
 
   /**
@@ -186,6 +290,38 @@ export class ChannelClient {
   }
 
   /**
+   * Update single discord channel data
+   * @param channel
+   */
+  async updateDiscordChannel(channel: DiscordChannel) {
+    await this.client.discordChannel.upsert({
+      where: {
+        channelId: channel.channelId,
+      },
+      update: {
+        name: channel.name,
+        channelId: channel.channelId,
+        categoryId: channel.categoryId,
+        slackChannelId: channel.slackChannelId,
+        type: channel.type,
+        topic: channel.topic,
+        isArchived: channel.isArchived,
+      },
+      create: {
+        name: channel.name,
+        channelId: channel.channelId,
+        categoryId: channel.categoryId,
+        slackChannelId: channel.slackChannelId,
+        type: channel.type,
+        topic: channel.topic,
+        isArchived: channel.isArchived,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt,
+      },
+    })
+  }
+
+  /**
    * Update many discord channel data
    * @param channels
    */
@@ -200,6 +336,7 @@ export class ChannelClient {
           channelId: channel.channelId,
           categoryId: channel.categoryId,
           slackChannelId: channel.slackChannelId,
+          type: channel.type,
           topic: channel.topic,
           isArchived: channel.isArchived,
         },
@@ -208,6 +345,7 @@ export class ChannelClient {
           channelId: channel.channelId,
           categoryId: channel.categoryId,
           slackChannelId: channel.slackChannelId,
+          type: channel.type,
           topic: channel.topic,
           isArchived: channel.isArchived,
           createdAt: channel.createdAt,

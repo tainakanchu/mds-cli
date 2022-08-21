@@ -22,7 +22,6 @@ const spinner = new Spinner()
     )
     .parse(process.argv)
 
-  // クライアントを作成
   spinner.loading("Create client")
   let channelClient: ChannelClient | undefined = undefined
   try {
@@ -33,7 +32,6 @@ const spinner = new Spinner()
   }
   spinner.success()
 
-  // チャンネルのデータを移行
   spinner.loading("Migrate channel data")
   try {
     await channelClient.migrateChannel(channelFilePath)

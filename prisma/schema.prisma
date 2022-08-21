@@ -25,7 +25,8 @@ model DiscordChannel {
   name            String
   channelId       String          @unique
   categoryId      String
-  slackChannelId  String
+  slackChannelId  String          @unique
+  type            Int
   topic           String?
   isArchived      Boolean
   slackChannel    SlackChannel    @relation(fields: [slackChannelId], references: [channelId])
@@ -44,13 +45,28 @@ model DiscordCategory {
 }
 
 model SlackUser {
-  id        Int      @id @default(autoincrement())
-  userId    String   @unique
-  name      String
-  email     String?  @unique
-  imageUrl  String
-  isBot     Boolean
-  isDeleted Boolean
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id          Int           @id @default(autoincrement())
+  userId      String        @unique
+  name        String
+  email       String?       @unique
+  imageUrl    String
+  isBot       Boolean
+  isDeleted   Boolean
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+  DiscordUser DiscordUser[]
+}
+
+model DiscordUser {
+  id          Int       @id @default(autoincrement())
+  userId      String?   @unique
+  slackUserId String    @unique
+  name        String
+  email       String?   @unique
+  imageUrl    String
+  isBot       Boolean
+  isDeleted   Boolean
+  slackUser   SlackUser @relation(fields: [slackUserId], references: [userId])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 }

@@ -20,7 +20,7 @@ export class CategoryClient {
     categoryNames: string[]
   ) {
     // Create many discord category
-    const discordCategories = await Promise.all(
+    const discordCategories: DiscordCategory[] = await Promise.all(
       categoryNames.map(async (categoryName) => {
         const newCategory = await retry(
           async () =>
@@ -35,7 +35,7 @@ export class CategoryClient {
           name: newCategory.name,
           createdAt: newCategory.createdAt,
           updatedAt: newCategory.createdAt,
-        } as DiscordCategory
+        }
       })
     )
 
@@ -95,5 +95,22 @@ export class CategoryClient {
       })
     )
     await this.client.$transaction([...query])
+  }
+
+  /**
+   * Get single discord category data
+   * @param categoryName
+   */
+  getDiscordCategory(categoryName: string) {
+    return this.client.discordCategory.findFirst({
+      where: {
+        name: categoryName,
+      },
+      orderBy: [
+        {
+          updatedAt: "desc",
+        },
+      ],
+    })
   }
 }

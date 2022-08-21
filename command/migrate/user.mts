@@ -15,7 +15,6 @@ const spinner = new Spinner()
   const program = new Command()
   program.description("Migrate user data command").parse(process.argv)
 
-  // クライアントを作成
   spinner.loading("Create client")
   let userClient: UserClient | undefined = undefined
   try {
@@ -26,7 +25,6 @@ const spinner = new Spinner()
   }
   spinner.success()
 
-  // ユーザーのデータを移行
   spinner.loading("Migrate user data")
   try {
     await userClient.migrateUser(userFilePath)
