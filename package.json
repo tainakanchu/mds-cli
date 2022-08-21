@@ -14,7 +14,7 @@
     "build:user": "node --loader ts-node/esm ./command/build/user.mts",
     "build:message": "node --loader ts-node/esm ./command/build/message.mts",
     "deploy": "run-s deploy:*",
-    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel.mts",
+    "deploy:channel": "node --loader ts-node/esm ./command/deploy/channel2.mts",
     "deploy:user": "node --loader ts-node/esm ./command/deploy/user.mts",
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message.mts",
     "destroy": "yes | run-s destroy:*",

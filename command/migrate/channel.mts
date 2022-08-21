@@ -33,7 +33,7 @@ const spinner = new Spinner()
   }
   spinner.success()
 
-  // チャンネルのデータを移行する
+  // チャンネルのデータを移行
   spinner.loading("Migrate channel data")
   try {
     await channelClient.migrateChannel(channelFilePath)
@@ -42,4 +42,6 @@ const spinner = new Spinner()
     process.exit(1)
   }
   spinner.success()
+
+  process.exit(0)
 })()

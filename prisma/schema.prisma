@@ -12,7 +12,47 @@ model SlackChannel {
   name            String
   channelId       String           @unique
   type            Int
-  topic           String
+  topic           String?
   isArchived      Boolean
   pins            String?
+  discordChannels DiscordChannel[]
 }
+
+model DiscordChannel {
+  id              Int             @id @default(autoincrement())
+  name            String
+  channelId       String          @unique
+  categoryId      String
+  slackChannelId  String
+  topic           String?
+  isArchived      Boolean
+  slackChannel    SlackChannel    @relation(fields: [slackChannelId], references: [channelId])
+  discordCategory DiscordCategory @relation(fields: [categoryId], references: [categoryId])
+}
+
+model DiscordCategory {
+  id              Int              @id @default(autoincrement())
+  name            String
+  categoryId      String           @unique
+  discordChannels DiscordChannel[]
+}
+
+// model Pin {
+//   id
+// }
+
+// model User {
+//   id        Int    @id
+//   name      String
+//   email     String @unique
+//   image_url String
+// }
+
+// model Post {
+//   id        Int     @id @default(autoincrement())
+//   title     String
+//   content   String?
+//   published Boolean @default(false)
+//   author    User?   @relation(fields: [authorId], references: [id])
+//   authorId  Int?
+// }
