@@ -121,7 +121,7 @@ export class ChannelClient {
           await discordClient.channels.delete(channel.channelId)
         } catch (error) {
           if (error instanceof DiscordAPIError && error.code == 10003) {
-            // Do not throw an error if the channel to be deleted does not exist
+            // Do not throw error if channel to be deleted does not exist
           } else {
             throw error
           }
