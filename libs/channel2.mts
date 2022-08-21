@@ -26,7 +26,7 @@ export class ChannelClient {
   }
 
   /**
-   * Migrate channel
+   * Migrate channel data
    * @param channelFilePath
    */
   async migrateChannel(channelFilePath: string) {
@@ -143,10 +143,9 @@ export class ChannelClient {
    */
   async getSlackChannelFile(channelFilePath: string) {
     await access(channelFilePath, constants.R_OK)
-    const channels = JSON.parse(
+    return JSON.parse(
       await readFile(channelFilePath, "utf8")
     ) as SlackChannelFile[]
-    return channels
   }
 
   /**
@@ -160,6 +159,7 @@ export class ChannelClient {
           channelId: channel.channelId,
         },
         update: {
+          channelId: channel.channelId,
           name: channel.name,
           type: channel.type,
           topic: channel.topic,

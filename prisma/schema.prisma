@@ -37,22 +37,12 @@ model DiscordCategory {
   discordChannels DiscordChannel[]
 }
 
-// model Pin {
-//   id
-// }
-
-// model User {
-//   id        Int    @id
-//   name      String
-//   email     String @unique
-//   image_url String
-// }
-
-// model Post {
-//   id        Int     @id @default(autoincrement())
-//   title     String
-//   content   String?
-//   published Boolean @default(false)
-//   author    User?   @relation(fields: [authorId], references: [id])
-//   authorId  Int?
-// }
+model SlackUser {
+  id        Int     @id @default(autoincrement())
+  userId    String  @unique
+  name      String
+  email     String? @unique
+  imageUrl  String
+  isBot     Boolean
+  isDeleted Boolean
+}

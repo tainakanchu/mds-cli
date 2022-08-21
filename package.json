@@ -9,6 +9,7 @@
     "init": "node --loader ts-node/esm ./command/init.mts",
     "migrate": "run-s migrate:*",
     "migrate:channel": "node --loader ts-node/esm ./command/migrate/channel.mts",
+    "migrate:user": "node --loader ts-node/esm ./command/migrate/user.mts",
     "build": "run-s init build:*",
     "build:channel": "node --loader ts-node/esm ./command/build/channel.mts",
     "build:user": "node --loader ts-node/esm ./command/build/user.mts",
