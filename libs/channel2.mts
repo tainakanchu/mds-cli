@@ -146,9 +146,7 @@ export class ChannelClient {
     // Get all slack channel data
     const slackChannels = await this.client.slackChannel.findMany({
       where: {
-        type: {
-          equals: 1,
-        },
+        type: 1,
       },
     })
 
@@ -204,9 +202,7 @@ export class ChannelClient {
     // Get all discord channel data
     const discordChannels = await this.client.discordChannel.findMany({
       where: {
-        type: {
-          equals: 1,
-        },
+        type: 1,
       },
     })
 
@@ -228,9 +224,7 @@ export class ChannelClient {
     // Delete all discord channel data
     await this.client.discordChannel.deleteMany({
       where: {
-        type: {
-          equals: 1,
-        },
+        type: 1,
       },
     })
 
