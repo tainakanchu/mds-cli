@@ -1,6 +1,7 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import type { Guild as DiscordClient } from "discord.js"
+import prompts from "prompts"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
 import { ChannelClient } from "../../libs/channel2.mjs"
@@ -14,9 +15,17 @@ interface Options {
 }
 
 ;(async () => {
+  // コマンドの実行確認
+  const confirm = await prompts({
+    type: "confirm",
+    name: "value",
+    message: "Destroy channel?",
+  })
+  if (!confirm.value) process.exit(0)
+
   const program = new Command()
   program
-    .description("Deploy channel command")
+    .description("Destroy channel command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -52,10 +61,10 @@ interface Options {
   }
   spinner.success()
 
-  // チャンネルをデプロイ
-  spinner.loading("Deploy discord channel")
+  // チャンネルを削除
+  spinner.loading("Destroy discord channel")
   try {
-    await channelClient.deployAllDiscordChannel(discordClient)
+    await channelClient.destroyAllDiscordChannel(discordClient)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)

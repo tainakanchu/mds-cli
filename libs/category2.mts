@@ -1,4 +1,4 @@
-import { ChannelType } from "discord.js"
+import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
 import retry from "async-retry"
 import { PrismaClient } from "@prisma/client"
@@ -11,13 +11,16 @@ export class CategoryClient {
   }
 
   /**
-   * Deploy category
+   * Deploy many discord category
    * @param discordClient
    * @param categoryNames
    */
-  async deployCategory(discordClient: DiscordClient, categoryNames: string[]) {
-    // Create category
-    const newCategories: DiscordCategory[] = await Promise.all(
+  async deployManyDiscordCategory(
+    discordClient: DiscordClient,
+    categoryNames: string[]
+  ) {
+    // Create discord category
+    const discordCategories: DiscordCategory[] = await Promise.all(
       categoryNames.map(async (categoryName) => {
         const newCategory = await retry(
           async () =>
@@ -34,17 +37,43 @@ export class CategoryClient {
       })
     )
 
-    // Update category data
-    await this.updateDiscordCategoryMany(newCategories)
+    // Update discord category data
+    await this.updateManyDiscordCategory(discordCategories)
 
-    return newCategories
+    return discordCategories
+  }
+
+  /**
+   * Destroy all discord category
+   */
+  async destroyAllDiscordCategory(discordClient: DiscordClient) {
+    // Get all discord category data
+    const discordCategories = await this.client.discordCategory.findMany()
+
+    // Destroy all discord category
+    await Promise.all(
+      discordCategories.map(async (category) => {
+        try {
+          await discordClient.channels.delete(category.categoryId)
+        } catch (error) {
+          if (error instanceof DiscordAPIError && error.code == 10003) {
+            // Do not throw error if category to be deleted does not exist
+          } else {
+            throw error
+          }
+        }
+      })
+    )
+
+    // Delete all discord category data
+    await this.client.discordCategory.deleteMany()
   }
 
   /**
    * Update many discord category
    * @param categories
    */
-  async updateDiscordCategoryMany(categories: DiscordCategory[]) {
+  async updateManyDiscordCategory(categories: DiscordCategory[]) {
     const query = categories.map((category) =>
       this.client.discordCategory.upsert({
         where: {

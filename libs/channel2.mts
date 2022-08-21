@@ -1,6 +1,6 @@
 import { PrismaClient, SlackChannel, DiscordChannel } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
-import { ChannelType } from "discord.js"
+import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
 import retry from "async-retry"
 import { CategoryClient } from "./category2.mjs"
@@ -30,11 +30,11 @@ export class ChannelClient {
    * @param channelFilePath
    */
   async migrateChannel(channelFilePath: string) {
-    // Get channel file
-    const channels = await this.getSlackChannelFile(channelFilePath)
+    // Get slack channel file
+    const slackChannels = await this.getSlackChannelFile(channelFilePath)
 
-    // Convert channel
-    const newChannels: SlackChannel[] = channels.map((channel) => {
+    // Convert slack channel data
+    const newSlackChannels: SlackChannel[] = slackChannels.map((channel) => {
       if (
         channel.id === undefined ||
         channel.name === undefined ||
@@ -54,26 +54,29 @@ export class ChannelClient {
       }
     })
 
-    // Update channel
-    await this.updateSlackChannelMany(newChannels)
+    // Update slack channel data
+    await this.updateManySlackChannel(newSlackChannels)
   }
 
   /**
-   * Deploy channel
+   * Deploy all discord channel
    */
-  async deployChannel(discordClient: DiscordClient, channels: SlackChannel[]) {
-    // Deploy category
+  async deployAllDiscordChannel(discordClient: DiscordClient) {
+    // Get all slack channel data
+    const slackChannels = await this.client.slackChannel.findMany()
+
+    // Deploy default category and archive category
     const categoryClient = new CategoryClient(this.client)
-    const categories = await categoryClient.deployCategory(discordClient, [
-      "CHANNEL",
-      "ARCHIVE",
-    ])
+    const categories = await categoryClient.deployManyDiscordCategory(
+      discordClient,
+      ["CHANNEL", "ARCHIVE"]
+    )
     const defaultCategory = categories[0]
     const archiveCategory = categories[1]
 
-    // Deploy channel
-    const newChannels: DiscordChannel[] = await Promise.all(
-      channels.map(async (channel) => {
+    // Deploy all discord channel
+    const discordChannels: DiscordChannel[] = await Promise.all(
+      slackChannels.map(async (channel) => {
         const categoryId = channel.isArchived
           ? archiveCategory.categoryId
           : defaultCategory.categoryId
@@ -100,17 +103,38 @@ export class ChannelClient {
       })
     )
 
-    // Update channel data
-    await this.updateDiscordChannelMany(newChannels)
-
-    return newChannels
+    // Update all discord channel data
+    await this.updateManyDiscordChannel(discordChannels)
   }
 
   /**
-   * Get slack channel
+   * Destroy all discord channel
    */
-  async getSlackChannelMany() {
-    return await this.client.slackChannel.findMany()
+  async destroyAllDiscordChannel(discordClient: DiscordClient) {
+    // Get all discord channel data
+    const discordChannels = await this.client.discordChannel.findMany()
+
+    // Destroy all discord channel
+    await Promise.all(
+      discordChannels.map(async (channel) => {
+        try {
+          await discordClient.channels.delete(channel.channelId)
+        } catch (error) {
+          if (error instanceof DiscordAPIError && error.code == 10003) {
+            // Do not throw an error if the channel to be deleted does not exist
+          } else {
+            throw error
+          }
+        }
+      })
+    )
+
+    // Delete all discord channel data
+    await this.client.discordChannel.deleteMany()
+
+    // Destroy all discord category
+    const categoryClient = new CategoryClient(this.client)
+    await categoryClient.destroyAllDiscordCategory(discordClient)
   }
 
   /**
@@ -129,7 +153,7 @@ export class ChannelClient {
    * Update many slack channel
    * @param channels
    */
-  async updateSlackChannelMany(channels: SlackChannel[]) {
+  async updateManySlackChannel(channels: SlackChannel[]) {
     const query = channels.map((channel) =>
       this.client.slackChannel.upsert({
         where: {
@@ -159,7 +183,7 @@ export class ChannelClient {
    * Update many discord channel
    * @param channels
    */
-  async updateDiscordChannelMany(channels: DiscordChannel[]) {
+  async updateManyDiscordChannel(channels: DiscordChannel[]) {
     const query = channels.map((channel) =>
       this.client.discordChannel.upsert({
         where: {
