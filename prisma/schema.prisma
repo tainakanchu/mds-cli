@@ -47,6 +47,8 @@ model DiscordCategory {
 model SlackUser {
   id          Int           @id @default(autoincrement())
   userId      String        @unique
+  appId       String?       @unique
+  botId       String?       @unique
   name        String
   email       String?       @unique
   imageUrl    String
@@ -69,4 +71,19 @@ model DiscordUser {
   slackUser   SlackUser @relation(fields: [slackUserId], references: [userId])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
+}
+
+model DiscordMessage {
+  id             Int      @id @default(autoincrement())
+  messageId      String   @unique
+  channelId      String?
+  content        String
+  type           Int
+  isPinned       Boolean
+  timestamp      String
+  authorId       String?
+  authorName     String?
+  authorImageUrl String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 }

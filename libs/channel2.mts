@@ -144,11 +144,7 @@ export class ChannelClient {
    */
   async deployAllDiscordChannel(discordClient: DiscordClient) {
     // Get all slack channel data
-    const slackChannels = await this.client.slackChannel.findMany({
-      where: {
-        type: 1,
-      },
-    })
+    const slackChannels = await this.getAllSlackChannel()
 
     // Deploy default category and archive category
     const categoryClient = new CategoryClient(this.client)
@@ -200,11 +196,7 @@ export class ChannelClient {
    */
   async destroyAllDiscordChannel(discordClient: DiscordClient) {
     // Get all discord channel data
-    const discordChannels = await this.client.discordChannel.findMany({
-      where: {
-        type: 1,
-      },
-    })
+    const discordChannels = await this.getAllDiscordChannel()
 
     // Destroy all discord channel
     await Promise.all(
@@ -260,6 +252,28 @@ export class ChannelClient {
           updatedAt: "desc",
         },
       ],
+    })
+  }
+
+  /**
+   * Get all slack channel data
+   */
+  async getAllSlackChannel() {
+    return await this.client.slackChannel.findMany({
+      where: {
+        type: 1,
+      },
+    })
+  }
+
+  /**
+   * Get all discord channel data
+   */
+  async getAllDiscordChannel() {
+    return await this.client.discordChannel.findMany({
+      where: {
+        type: 1,
+      },
     })
   }
 

@@ -1,6 +1,8 @@
 import { PrismaClient, SlackUser, DiscordUser } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
 import type { Guild as DiscordClient } from "discord.js"
+import { WebClient as SlackClient } from "@slack/web-api"
+import retry from "async-retry"
 import { ChannelClient } from "./channel2.mjs"
 
 interface SlackUserChannelFile {
@@ -8,6 +10,8 @@ interface SlackUserChannelFile {
   is_bot?: boolean
   deleted?: boolean
   profile?: {
+    bot_id?: string
+    api_app_id?: string
     real_name?: string
     display_name?: string
     email?: string
@@ -45,6 +49,8 @@ export class UserClient {
       return {
         id: 0,
         userId: user.id,
+        appId: user.profile.api_app_id || null,
+        botId: user.profile.bot_id || null,
         name: user.is_bot ? user.profile.real_name : user.profile.display_name,
         email: user.profile.email || null,
         imageUrl: user.profile.image_512,
@@ -57,6 +63,81 @@ export class UserClient {
 
     // Update slack user data
     await this.updateManySlackUser(newSlackUsers)
+  }
+
+  /**
+   * Get slack user
+   * @param userId
+   */
+  async getSlackUser(userId: string) {
+    return await this.client.slackUser.findFirst({
+      where: {
+        userId: userId,
+      },
+    })
+  }
+
+  /**
+   * Get slack bot
+   * @param botId
+   * @param appId
+   */
+  async getSlackBot(slackClient: SlackClient, botId: string, appId: string) {
+    // Get slack bot
+    let bot: SlackUser | null = await this.client.slackUser.findFirst({
+      where: {
+        appId: appId,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    })
+    if (bot) return bot
+
+    // Get slack bot from API
+    const result = await slackClient.users.info({ user: botId })
+
+    if (
+      result.user?.id === undefined ||
+      result.user.profile?.real_name === undefined ||
+      result.user.profile?.display_name === undefined ||
+      result.user?.color === undefined ||
+      result.user?.profile?.image_512 === undefined ||
+      result.user?.is_bot === undefined ||
+      result.user?.deleted === undefined
+    )
+      return null
+
+    bot = {
+      id: 0,
+      userId: result.user.id,
+      appId: result.user.profile.api_app_id || null,
+      botId: result.user.profile.bot_id || null,
+      name: result.user.is_bot
+        ? result.user.profile.real_name
+        : result.user.profile.display_name,
+      email: result.user.profile.email || null,
+      imageUrl: result.user?.profile.image_512,
+      isBot: result.user.is_bot,
+      isDeleted: result.user?.deleted,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    return bot
+  }
+
+  /**
+   * Get slack username
+   * @param userId
+   */
+  async getSlackUsername(userId: string) {
+    const user = await this.client.slackUser.findFirst({
+      where: {
+        userId: userId,
+      },
+    })
+    return user ? user.name : null
   }
 
   /**
@@ -82,6 +163,8 @@ export class UserClient {
         },
         update: {
           userId: user.userId,
+          appId: user.appId,
+          botId: user.botId,
           name: user.name,
           email: user.email,
           imageUrl: user.imageUrl,
@@ -90,6 +173,8 @@ export class UserClient {
         },
         create: {
           userId: user.userId,
+          appId: user.appId,
+          botId: user.botId,
           name: user.name,
           email: user.email,
           imageUrl: user.imageUrl,
