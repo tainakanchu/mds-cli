@@ -139,12 +139,15 @@ export class ChannelClient {
   /**
    * Destroy single channel
    * @param discordClient
-   * @param channelDeployId
+   * @param channel
    */
-  async destroyChannel(discordClient: DiscordClient, channelDeployId: string) {
+  async destroyChannel(discordClient: DiscordClient, channel: Channel) {
+    // Skip undeployed channel
+    if (!channel.deployId) return
+
     // Destroy discord channel
     try {
-      await discordClient.channels.delete(channelDeployId)
+      await discordClient.channels.delete(channel.deployId)
     } catch (error) {
       if (error instanceof DiscordAPIError && error.code == 10003) {
         // Do not throw error if channel to be deleted does not exist
@@ -153,12 +156,17 @@ export class ChannelClient {
       }
     }
 
+    // Update channel data
+    const newChannel = (() => channel)()
+    newChannel.deployId = null
+    await this.updateChannel(newChannel)
+
     // Delete channel data
-    await this.client.channel.delete({
-      where: {
-        deployId: channelDeployId,
-      },
-    })
+    // await this.client.channel.delete({
+    //   where: {
+    //     deployId: channelDeployId,
+    //   },
+    // })
   }
 
   /**
@@ -225,7 +233,7 @@ export class ChannelClient {
     const channels = await this.getAllChannel(true)
 
     // Destroy all channel
-    await Promise.all(
+    const newChannels = await Promise.all(
       channels.map(async (channel) => {
         try {
           if (channel.deployId)
@@ -237,20 +245,26 @@ export class ChannelClient {
             throw error
           }
         }
+
+        const newChannel = (() => channel)()
+        newChannel.deployId = null
+        return channel
       })
     )
 
+    await this.updateManyChannel(newChannels)
+
     // Delete all channel data
-    await this.client.channel.deleteMany({
-      where: {
-        deployId: {
-          not: {
-            equals: null,
-          },
-        },
-        type: 1,
-      },
-    })
+    // await this.client.channel.deleteMany({
+    //   where: {
+    //     deployId: {
+    //       not: {
+    //         equals: null,
+    //       },
+    //     },
+    //     type: 1,
+    //   },
+    // })
 
     // Destroy all category
     await this.categoryClient.destroyAllCategory(discordClient)

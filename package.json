@@ -21,7 +21,7 @@
     "deploy:message": "node --loader ts-node/esm ./command/deploy/message2.mts",
     "destroy": "yes | run-s destroy:*",
     "destroy:user": "node --loader ts-node/esm ./command/destroy/user2.mts",
-    "destroy:message": "node --loader ts-node/esm ./command/destroy/message.mts",
+    "destroy:message": "node --loader ts-node/esm ./command/destroy/message2.mts",
     "destroy:channel": "node --loader ts-node/esm ./command/destroy/channel2.mts",
     "start": "run-s build deploy",
     "update": "npx ncu -u && npm install",

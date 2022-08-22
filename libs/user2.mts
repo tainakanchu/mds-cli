@@ -278,6 +278,6 @@ export class UserClient {
     // TODO: Destroy all message for channel for hosting user image
 
     // Destroy channel for hosting user image
-    await this.channelClient.destroyChannel(discordClient, userChannel.deployId)
+    await this.channelClient.destroyChannel(discordClient, userChannel)
   }
 }

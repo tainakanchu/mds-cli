@@ -210,6 +210,83 @@ export class MessageClient {
   }
 
   /**
+   * Destroy all message
+   */
+  async destroyAllMessage(discordClient: DiscordClient) {
+    //  Get all channel data
+    const channels = await this.channelClient.getAllChannel()
+
+    // Delete all messages
+    await Promise.all(
+      channels.map(async (channel) => {
+        if (!channel.deployId)
+          throw new Error(`Failed to deployed channel id of ${channel.name}`)
+
+        const channelManager = discordClient.channels.cache.get(
+          channel.deployId
+        )
+        if (
+          channelManager === undefined ||
+          channelManager.type !== ChannelType.GuildText
+        )
+          throw new Error(`Failed to get channel manager of ${channel.id}`)
+
+        // Pagination message
+        const take = 100
+        let skip = 0
+        const total = await this.client.message.count({
+          where: {
+            channelDeployId: channel.deployId,
+          },
+        })
+        while (skip < total) {
+          const messages = await this.client.message.findMany({
+            take: take,
+            skip: skip,
+            where: {
+              channelDeployId: channel.deployId,
+            },
+            orderBy: {
+              timestamp: "asc",
+            },
+          })
+
+          // Destroy many message
+          await this.destroyManyMessage(channelManager, messages)
+
+          skip += take
+        }
+      })
+    )
+  }
+
+  /**
+   * Destroy many message
+   * @param channelManager
+   * @param messages
+   */
+  async destroyManyMessage(channelManager: TextChannel, messages: Message[]) {
+    const newMessages = await Promise.all(
+      messages
+        // Skip destroy undeployed message
+        .filter((message) => message.deployId)
+        .map(async (message) => {
+          // Destroy message
+          // FIXME: Want to avoid forced type casting
+          await channelManager.messages.delete(message.deployId as string)
+
+          const newMessage = (() => message)()
+          newMessage.deployId = null
+
+          return newMessage
+        })
+    )
+
+    // Update deployed message
+    await this.updateManyMessage(newMessages)
+  }
+
+  /**
    * Get slack message file
    * @param messageFilePath
    */

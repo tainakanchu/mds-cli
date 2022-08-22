@@ -48,7 +48,7 @@ interface Options {
 
   spinner.loading("Create client")
   let userClient: UserClient | undefined = undefined
-  let discordClient: DiscordClient | null = null
+  let discordClient: DiscordClient | undefined = undefined
   try {
     userClient = new UserClient()
     discordClient = await createDiscordClient(discordBotToken, discordServerId)
