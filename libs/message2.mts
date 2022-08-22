@@ -2,7 +2,7 @@ import { PrismaClient, Message, User } from "@prisma/client"
 import { access, readFile, constants, readdir } from "node:fs/promises"
 import { statSync } from "node:fs"
 import { join } from "node:path"
-import { format, formatISO, fromUnixTime } from "date-fns"
+import { format, formatISO, fromUnixTime, addSeconds } from "date-fns"
 import { WebClient as SlackClient } from "@slack/web-api"
 import { FileElement } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType } from "discord.js"
@@ -282,6 +282,8 @@ export class MessageClient {
 
     // Update message with file
     const newMessage = (() => message)()
+    // Add 1 second to prevent duplicate timestamp
+    newMessage.timestamp = addSeconds(new Date(), 1)
     newMessage.deployId = sendMessage.id
     await this.updateMessage(newMessage)
   }
