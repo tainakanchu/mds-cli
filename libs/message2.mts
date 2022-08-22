@@ -200,13 +200,7 @@ export class MessageClient {
     maxFileSize: 8000000 | 50000000 | 100000000
   ) {
     for (const message of messages) {
-      await this.deployMessage(channelManager, message)
-
-      // Deploy attached file as separate message so that attached file show below embed
-      if (message.files) {
-        const files = JSON.parse(message.files) as File[]
-        await this.deployManyFile(channelManager, message, files, maxFileSize)
-      }
+      await this.deployMessage(channelManager, message, maxFileSize)
     }
   }
 
@@ -214,8 +208,13 @@ export class MessageClient {
    * Deploy single message
    * @param channelManager
    * @param message
+   * @param maxFileSize
    */
-  async deployMessage(channelManager: TextChannel, message: Message) {
+  async deployMessage(
+    channelManager: TextChannel,
+    message: Message,
+    maxFileSize: 8000000 | 50000000 | 100000000
+  ) {
     // Get post datetime of message
     const postTime = format(message.timestamp, " HH:mm")
     const isoPostDatetime = formatISO(message.timestamp)
@@ -251,6 +250,17 @@ export class MessageClient {
     const newMessage = (() => message)()
     newMessage.deployId = sendMessage.id
     await this.updateMessage(newMessage)
+
+    // Deploy attached file as separate message so that attached file show below embed
+    if (message.files) {
+      const files = JSON.parse(message.files) as File[]
+      await this.deployManyFile(channelManager, message, files, maxFileSize)
+    }
+
+    // Deploy pinned item
+    if (message.isPinned) {
+      await sendMessage.pin()
+    }
   }
 
   /**
@@ -350,6 +360,11 @@ export class MessageClient {
         // Skip destroy undeployed message
         .filter((message) => message.deployId)
         .map(async (message) => {
+          if (message.isPinned) {
+            // FIXME: Want to avoid forced type casting
+            await channelManager.messages.unpin(message.deployId as string)
+          }
+
           // Destroy message
           // FIXME: Want to avoid forced type casting
           await channelManager.messages.delete(message.deployId as string)
