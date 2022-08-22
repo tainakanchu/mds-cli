@@ -5,6 +5,7 @@ import { join } from "node:path"
 import { format, formatISO, fromUnixTime } from "date-fns"
 import retry from "async-retry"
 import { WebClient as SlackClient } from "@slack/web-api"
+import { FileElement } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType } from "discord.js"
 import type {
   Guild as DiscordClient,
@@ -22,6 +23,12 @@ interface SlackMessageFile {
   user?: string
   bot_id?: string
   app_id?: string
+  files?: FileElement[]
+}
+
+interface File {
+  url: string
+  size: number
 }
 
 export class MessageClient {
@@ -73,9 +80,23 @@ export class MessageClient {
             message.text
           )
 
-          // Get if message is pinned item
+          // Get pinned item
           const pinIds = channel.pins ? channel.pins.split(",") : []
           const isPinned = pinIds.includes(message.ts)
+
+          // Get attached file
+          const files = message.files
+            ? JSON.stringify(
+                message.files.map((file) => {
+                  if (!file.url_private || !file.size)
+                    throw new Error("File is missing required parameter")
+                  return {
+                    url: file.url_private,
+                    size: file.size,
+                  } as File
+                })
+              )
+            : null
 
           // TODO: Message type
           let messageType = 1
@@ -89,13 +110,12 @@ export class MessageClient {
           }
           if (!author) throw new Error("Failed to get message author")
 
-          // TODO:Replace author image url
-
           newMessages.push({
             timestamp: fromUnixTime(Number(message.ts)),
             deployId: null,
             channelDeployId: channel.deployId,
             content: content,
+            files: files,
             type: messageType,
             isPinned: isPinned,
             authorId: author.id,
@@ -132,6 +152,15 @@ export class MessageClient {
       )
         throw new Error(`Failed to get channel manager of ${channel.id}`)
 
+      // Get max file size for server boost level
+      const boostCount = channelManager.guild.premiumSubscriptionCount || 0
+      let maxFileSize: 8000000 | 50000000 | 100000000 = 8000000
+      if (boostCount >= 7 && boostCount < 14) {
+        maxFileSize = 50000000
+      } else if (boostCount >= 14) {
+        maxFileSize = 100000000
+      }
+
       // Pagination message
       const take = 100
       let skip = 0
@@ -153,7 +182,7 @@ export class MessageClient {
         })
 
         // Deploy many message
-        await this.deployManyMessage(channelManager, messages)
+        await this.deployManyMessage(channelManager, messages, maxFileSize)
 
         skip += take
       }
@@ -164,49 +193,104 @@ export class MessageClient {
    * Deploy many message
    * @param channelManager
    * @param messages
+   * @param maxFileSize
    */
-  async deployManyMessage(channelManager: TextChannel, messages: Message[]) {
+  async deployManyMessage(
+    channelManager: TextChannel,
+    messages: Message[],
+    maxFileSize: 8000000 | 50000000 | 100000000
+  ) {
     for (const message of messages) {
-      // Get post datetime of message
-      const postTime = format(message.timestamp, " HH:mm")
-      const isoPostDatetime = formatISO(message.timestamp)
+      await this.deployMessage(channelManager, message)
 
-      let authorTypeIcon: "🤖" | "🔵" | "🟢" = "🟢"
-      if (message.authorType === 1) authorTypeIcon = "🤖"
-      if (message.authorType === 2) authorTypeIcon = "🔵"
-
-      const fields: Embed["fields"] = [
-        {
-          name: "------------------------------------------------",
-          value: message.content,
-        },
-      ]
-
-      //  Deploy message
-      const sendMessage = await retry(
-        async () =>
-          await channelManager.send({
-            embeds: [
-              {
-                type: EmbedType.Rich,
-                color: message.authorColor,
-                fields: fields,
-                timestamp: isoPostDatetime,
-                // FIXME: Type guard not working
-                author: {
-                  name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
-                  icon_url: message.authorImageUrl,
-                },
-              },
-            ],
-          })
-      )
-
-      // Update message
-      const newMessage = message
-      newMessage.deployId = sendMessage.id
-      await this.updateMessage(newMessage)
+      // Deploy attached file as separate message so that attached file show below embed
+      if (message.files) {
+        const files = JSON.parse(message.files) as File[]
+        await this.deployManyFile(channelManager, message, files, maxFileSize)
+      }
     }
+  }
+
+  /**
+   * Deploy single message
+   * @param channelManager
+   * @param message
+   */
+  async deployMessage(channelManager: TextChannel, message: Message) {
+    // Get post datetime of message
+    const postTime = format(message.timestamp, " HH:mm")
+    const isoPostDatetime = formatISO(message.timestamp)
+
+    let authorTypeIcon: "🤖" | "🔵" | "🟢" = "🟢"
+    if (message.authorType === 1) authorTypeIcon = "🤖"
+    if (message.authorType === 2) authorTypeIcon = "🔵"
+
+    const fields: Embed["fields"] = [
+      {
+        name: "------------------------------------------------",
+        value: message.content || "",
+      },
+    ]
+
+    //  Deploy message
+    const sendMessage = await retry(
+      async () =>
+        await channelManager.send({
+          embeds: [
+            {
+              type: EmbedType.Rich,
+              color: message.authorColor,
+              fields: fields,
+              timestamp: isoPostDatetime,
+              author: {
+                name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
+                icon_url: message.authorImageUrl,
+              },
+            },
+          ],
+        })
+    )
+
+    // Update message
+    const newMessage = (() => message)()
+    newMessage.deployId = sendMessage.id
+    await this.updateMessage(newMessage)
+  }
+
+  /**
+   * Deploy many file
+   * @param channelManager
+   * @param message
+   * @param files
+   * @param maxFileSize
+   */
+  async deployManyFile(
+    channelManager: TextChannel,
+    message: Message,
+    files: File[],
+    maxFileSize: 8000000 | 50000000 | 100000000
+  ) {
+    // If file exceeds max upload file size, file url is attached without uploading file
+    const sizeOverFileUrls = files
+      ?.filter((file) => file.size && file.size >= maxFileSize)
+      .map((file) => file.url)
+    const uploadFileUrls = files
+      ?.filter((file) => file.size && file.size < maxFileSize)
+      .map((file) => file.url)
+
+    //  Deploy message with file
+    const sendMessage = await retry(
+      async () =>
+        await channelManager.send({
+          content: sizeOverFileUrls.join("\n"),
+          files: uploadFileUrls,
+        })
+    )
+
+    // Update message with file
+    const newMessage = (() => message)()
+    newMessage.deployId = sendMessage.id
+    await this.updateMessage(newMessage)
   }
 
   /**
@@ -381,6 +465,7 @@ export class MessageClient {
         deployId: message.deployId,
         channelDeployId: message.channelDeployId,
         content: message.content,
+        files: message.files,
         type: message.type,
         isPinned: message.isPinned,
         authorId: message.authorId,
@@ -394,6 +479,7 @@ export class MessageClient {
         deployId: message.deployId,
         channelDeployId: message.channelDeployId,
         content: message.content,
+        files: message.files,
         type: message.type,
         isPinned: message.isPinned,
         authorId: message.authorId,
@@ -419,6 +505,7 @@ export class MessageClient {
           deployId: message.deployId,
           channelDeployId: message.channelDeployId,
           content: message.content,
+          files: message.files,
           type: message.type,
           isPinned: message.isPinned,
           authorId: message.authorId,
@@ -432,6 +519,7 @@ export class MessageClient {
           deployId: message.deployId,
           channelDeployId: message.channelDeployId,
           content: message.content,
+          files: message.files,
           type: message.type,
           isPinned: message.isPinned,
           authorId: message.authorId,

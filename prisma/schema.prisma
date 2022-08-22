@@ -47,7 +47,8 @@ model Message {
   timestamp       DateTime @id
   deployId        String?  @unique
   channelDeployId String
-  content         String
+  content         String?
+  files           String?
   type            Int
   isPinned        Boolean
   authorId        String
