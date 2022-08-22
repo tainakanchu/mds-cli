@@ -1,6 +1,5 @@
 import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
-import retry from "async-retry"
 import { PrismaClient } from "@prisma/client"
 import type { Category } from "@prisma/client"
 
@@ -21,13 +20,11 @@ export class CategoryClient {
     // Create all category
     const newCategories: Category[] = await Promise.all(
       categories.map(async (category) => {
-        const newCategory = await retry(
-          async () =>
-            await discordClient.channels.create({
-              name: category.name,
-              type: ChannelType.GuildCategory,
-            })
-        )
+        const newCategory = await discordClient.channels.create({
+          name: category.name,
+          type: ChannelType.GuildCategory,
+        })
+
         return {
           id: category.id,
           deployId: newCategory.id,

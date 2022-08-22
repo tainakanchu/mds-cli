@@ -3,7 +3,6 @@ import { access, readFile, constants, readdir } from "node:fs/promises"
 import { statSync } from "node:fs"
 import { join } from "node:path"
 import { format, formatISO, fromUnixTime } from "date-fns"
-import retry from "async-retry"
 import { WebClient as SlackClient } from "@slack/web-api"
 import { FileElement } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType } from "discord.js"
@@ -233,23 +232,20 @@ export class MessageClient {
     ]
 
     //  Deploy message
-    const sendMessage = await retry(
-      async () =>
-        await channelManager.send({
-          embeds: [
-            {
-              type: EmbedType.Rich,
-              color: message.authorColor,
-              fields: fields,
-              timestamp: isoPostDatetime,
-              author: {
-                name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
-                icon_url: message.authorImageUrl,
-              },
-            },
-          ],
-        })
-    )
+    const sendMessage = await channelManager.send({
+      embeds: [
+        {
+          type: EmbedType.Rich,
+          color: message.authorColor,
+          fields: fields,
+          timestamp: isoPostDatetime,
+          author: {
+            name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
+            icon_url: message.authorImageUrl,
+          },
+        },
+      ],
+    })
 
     // Update message
     const newMessage = (() => message)()
@@ -279,13 +275,10 @@ export class MessageClient {
       .map((file) => file.url)
 
     //  Deploy message with file
-    const sendMessage = await retry(
-      async () =>
-        await channelManager.send({
-          content: sizeOverFileUrls.join("\n"),
-          files: uploadFileUrls,
-        })
-    )
+    const sendMessage = await channelManager.send({
+      content: sizeOverFileUrls.join("\n"),
+      files: uploadFileUrls,
+    })
 
     // Update message with file
     const newMessage = (() => message)()

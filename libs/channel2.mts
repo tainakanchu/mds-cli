@@ -2,7 +2,6 @@ import { PrismaClient, Channel } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
 import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
-import retry from "async-retry"
 import { CategoryClient } from "./category2.mjs"
 
 interface SlackChannelFile {
@@ -106,15 +105,12 @@ export class ChannelClient {
       throw new Error("Failed to get deployed init category")
 
     // Deploy channel
-    const result = await retry(
-      async () =>
-        await discordClient.channels.create({
-          name: channelName,
-          type: ChannelType.GuildText,
-          topic: option.topic,
-          parent: category.deployId,
-        })
-    )
+    const result = await discordClient.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      topic: option.topic,
+      parent: category.deployId,
+    })
 
     const newChannel: Channel = {
       id: channelId,
@@ -195,15 +191,12 @@ export class ChannelClient {
           ? archiveCategory.deployId
           : defaultCategory.deployId
 
-        const result = await retry(
-          async () =>
-            await discordClient.channels.create({
-              name: channel.name,
-              type: ChannelType.GuildText,
-              topic: channel.topic ? channel.topic : undefined,
-              parent: categoryDeployId,
-            })
-        )
+        const result = await discordClient.channels.create({
+          name: channel.name,
+          type: ChannelType.GuildText,
+          topic: channel.topic ? channel.topic : undefined,
+          parent: categoryDeployId,
+        })
 
         return {
           id: channel.id,
@@ -306,6 +299,7 @@ export class ChannelClient {
   async getAllChannel(isDeployed: boolean = false) {
     return await this.client.channel.findMany({
       where: {
+        // Skip channel created for system
         type: 1,
         deployId: isDeployed ? { not: { equals: null } } : undefined,
       },
