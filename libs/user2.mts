@@ -1,4 +1,4 @@
-import { PrismaClient, SlackUser, DiscordUser } from "@prisma/client"
+import { PrismaClient, User } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
 import type { Guild as DiscordClient } from "discord.js"
 import { WebClient as SlackClient } from "@slack/web-api"
@@ -33,8 +33,8 @@ export class UserClient {
     // Get user channel file
     const slackUsers = await this.getSlackUserFile(userFilePath)
 
-    // Convert slack user data
-    const newSlackUsers: SlackUser[] = slackUsers.map((user) => {
+    // Convert user data
+    const newUsers: User[] = slackUsers.map((user) => {
       if (
         user.id === undefined ||
         user.is_bot === undefined ||
@@ -47,8 +47,7 @@ export class UserClient {
         throw new Error("User is missing required parameter")
 
       return {
-        id: 0,
-        userId: user.id,
+        id: user.id,
         appId: user.profile.api_app_id || null,
         botId: user.profile.bot_id || null,
         name: user.is_bot ? user.profile.real_name : user.profile.display_name,
@@ -67,8 +66,8 @@ export class UserClient {
       }
     })
 
-    // Update slack user data
-    await this.updateManySlackUser(newSlackUsers)
+    // Update user data
+    await this.updateManyUser(newUsers)
   }
 
   /**
@@ -76,12 +75,12 @@ export class UserClient {
    * @param userId
    */
   async getSlackUser(slackClient: SlackClient, userId: string) {
-    let user: SlackUser | null = null
+    let user: User | null = null
 
     // Get slack bot
-    user = await this.client.slackUser.findFirst({
+    user = await this.client.user.findFirst({
       where: {
-        userId: userId,
+        id: userId,
       },
       orderBy: {
         updatedAt: "desc",
@@ -104,8 +103,7 @@ export class UserClient {
       return null
 
     user = {
-      id: 0,
-      userId: result.user.id,
+      id: result.user.id,
       appId: result.user.profile.api_app_id || null,
       botId: result.user.profile.bot_id || null,
       name: result.user.is_bot
@@ -127,13 +125,13 @@ export class UserClient {
   }
 
   /**
-   * Get slack bot
+   * Get bot
    * @param botId
    */
-  async getSlackBot(slackClient: SlackClient, botId: string) {
-    let bot: SlackUser | null = null
+  async getBot(slackClient: SlackClient, botId: string) {
+    let bot: User | null = null
 
-    bot = await this.client.slackUser.findFirst({
+    bot = await this.client.user.findFirst({
       where: {
         botId: botId,
         type: 1,
@@ -143,7 +141,7 @@ export class UserClient {
 
     const result = await slackClient.bots.info({ bot: botId })
     if (result.bot?.app_id) {
-      bot = await this.client.slackUser.findFirst({
+      bot = await this.client.user.findFirst({
         where: {
           appId: result.bot.app_id,
           type: 1,
@@ -154,13 +152,13 @@ export class UserClient {
   }
 
   /**
-   * Get discord user
+   * Get user
    * @param userId
    */
-  async getDiscordUser(userId: string) {
-    return await this.client.discordUser.findFirst({
+  async getUser(userId: string) {
+    return await this.client.user.findFirst({
       where: {
-        userId: userId,
+        id: userId,
       },
     })
   }
@@ -170,9 +168,9 @@ export class UserClient {
    * @param userId
    */
   async getSlackUsername(userId: string) {
-    const user = await this.client.slackUser.findFirst({
+    const user = await this.client.user.findFirst({
       where: {
-        userId: userId,
+        id: userId,
       },
     })
     return user ? user.name : null
@@ -190,17 +188,17 @@ export class UserClient {
   }
 
   /**
-   * Update many slack user data
+   * Update many user data
    * @param users
    */
-  async updateManySlackUser(users: SlackUser[]) {
+  async updateManyUser(users: User[]) {
     const query = users.map((user) =>
-      this.client.slackUser.upsert({
+      this.client.user.upsert({
         where: {
-          userId: user.userId,
+          id: user.id,
         },
         update: {
-          userId: user.userId,
+          id: user.id,
           appId: user.appId,
           botId: user.botId,
           name: user.name,
@@ -212,47 +210,12 @@ export class UserClient {
           isDeleted: user.isDeleted,
         },
         create: {
-          userId: user.userId,
+          id: user.id,
           appId: user.appId,
           botId: user.botId,
           name: user.name,
           type: user.type,
           color: user.color,
-          email: user.email,
-          imageUrl: user.imageUrl,
-          isBot: user.isBot,
-          isDeleted: user.isDeleted,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        },
-      })
-    )
-    await this.client.$transaction([...query])
-  }
-
-  /**
-   * Update many discord user data
-   * @param users
-   */
-  async updateManyDiscordUser(users: DiscordUser[]) {
-    const query = users.map((user) =>
-      this.client.discordUser.upsert({
-        where: {
-          slackUserId: user.slackUserId,
-        },
-        update: {
-          userId: user.userId,
-          slackUserId: user.slackUserId,
-          name: user.name,
-          email: user.email,
-          imageUrl: user.imageUrl,
-          isBot: user.isBot,
-          isDeleted: user.isDeleted,
-        },
-        create: {
-          userId: user.userId,
-          slackUserId: user.slackUserId,
-          name: user.name,
           email: user.email,
           imageUrl: user.imageUrl,
           isBot: user.isBot,
@@ -293,34 +256,36 @@ export class UserClient {
       }
     )
 
-    // Get slack user data
-    const slackUsers = await this.client.slackUser.findMany()
+    // Get user data
+    const users = await this.client.user.findMany()
 
-    // Deploy all slack user image
-    const discordUsers: DiscordUser[] = []
-    for (const slackUser of slackUsers) {
-      // Upload slack user image to channel
+    // Deploy all user image
+    const newUsers: User[] = []
+    for (const user of users) {
+      // Upload user image to channel
       const message = await userChannel.send({
-        content: slackUser.name,
-        files: [slackUser.imageUrl],
+        content: user.name,
+        files: [user.imageUrl],
       })
 
-      discordUsers.push({
-        id: 0,
-        userId: null,
-        slackUserId: slackUser.userId,
-        name: slackUser.name,
-        email: slackUser.email,
+      newUsers.push({
+        id: user.id,
+        appId: user.appId,
+        botId: user.botId,
+        type: user.type,
+        color: user.color,
+        name: user.name,
+        email: user.email,
         imageUrl: message.attachments.map((file) => file.url)[0],
-        isBot: slackUser.isBot,
-        isDeleted: slackUser.isDeleted,
+        isBot: user.isBot,
+        isDeleted: user.isDeleted,
         createdAt: message.createdAt,
         updatedAt: message.createdAt,
       })
     }
 
-    // Update discord user data
-    await this.updateManyDiscordUser(discordUsers)
+    // Update user data
+    await this.updateManyUser(newUsers)
   }
 
   /**

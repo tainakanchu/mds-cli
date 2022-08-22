@@ -19,7 +19,7 @@ interface Options {
 ;(async () => {
   const program = new Command()
   program
-    .description("Migrate message data command")
+    .description("Migrate message command")
     .requiredOption(
       "-st, --slack-bot-token [string]",
       "SlackBot OAuth Token",
@@ -48,7 +48,7 @@ interface Options {
   }
   spinner.success()
 
-  spinner.loading("Migrate message data")
+  spinner.loading("Migrate message")
   try {
     await messageClient.migrateAllMessage(slackClient, srcDirPath)
   } catch (error) {

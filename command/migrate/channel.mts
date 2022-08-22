@@ -14,7 +14,7 @@ const spinner = new Spinner()
 ;(async () => {
   const program = new Command()
   program
-    .description("Migrate channel data command")
+    .description("Migrate channel command")
     .requiredOption(
       "-ma, --migrate-archive [boolean]",
       "Whether to migrate archive channel",
@@ -32,7 +32,7 @@ const spinner = new Spinner()
   }
   spinner.success()
 
-  spinner.loading("Migrate channel data")
+  spinner.loading("Migrate channel")
   try {
     await channelClient.migrateChannel(channelFilePath)
   } catch (error) {

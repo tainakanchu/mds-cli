@@ -13,7 +13,7 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program.description("Migrate user data command").parse(process.argv)
+  program.description("Migrate user command").parse(process.argv)
 
   spinner.loading("Create client")
   let userClient: UserClient | undefined = undefined
@@ -25,7 +25,7 @@ const spinner = new Spinner()
   }
   spinner.success()
 
-  spinner.loading("Migrate user data")
+  spinner.loading("Migrate user")
   try {
     await userClient.migrateUser(userFilePath)
   } catch (error) {
