@@ -112,7 +112,7 @@ export class CategoryClient {
     return await this.client.category.findFirst({
       where: {
         id: categoryId,
-        deployId: isDeployed ? { not: { equals: null } } : undefined,
+        deployId: isDeployed ? { not: { equals: null } } : { equals: null },
       },
       orderBy: [
         {

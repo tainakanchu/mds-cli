@@ -71,10 +71,10 @@ export class UserClient {
   }
 
   /**
-   * Get slack user
+   * Get user
    * @param userId
    */
-  async getSlackUser(slackClient: SlackClient, userId: string) {
+  async getUser(slackClient: SlackClient, userId: string) {
     let user: User | null = null
 
     // Get slack bot
@@ -152,22 +152,10 @@ export class UserClient {
   }
 
   /**
-   * Get user
+   * Get username
    * @param userId
    */
-  async getUser(userId: string) {
-    return await this.client.user.findFirst({
-      where: {
-        id: userId,
-      },
-    })
-  }
-
-  /**
-   * Get slack username
-   * @param userId
-   */
-  async getSlackUsername(userId: string) {
+  async getUsername(userId: string) {
     const user = await this.client.user.findFirst({
       where: {
         id: userId,
@@ -234,18 +222,7 @@ export class UserClient {
   async deployUserImageChannel(discordClient: DiscordClient) {
     // Deploy channel for hosting user image
     const channelClient = new ChannelClient(this.client)
-    await channelClient.updateSlackChannel({
-      id: 0,
-      channelId: "C0000000000",
-      name: "mds-user",
-      type: 2,
-      topic: null,
-      isArchived: true,
-      pins: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    const userChannel = await channelClient.deployDiscordChannel(
+    const userChannel = await channelClient.deployChannel(
       discordClient,
       "mds-user",
       "C0000000000",
@@ -256,7 +233,7 @@ export class UserClient {
       }
     )
 
-    // Get user data
+    // Get all user data
     const users = await this.client.user.findMany()
 
     // Deploy all user image
@@ -294,16 +271,13 @@ export class UserClient {
   async destroyUserImageChannel(discordClient: DiscordClient) {
     //  Get channel for hosting user image
     const channelClient = new ChannelClient(this.client)
-    const userChannel = await channelClient.getDiscordChannel("mds-user", 2)
-    if (!userChannel)
-      throw new Error("Failed to get channel for hosting user image")
+    const userChannel = await channelClient.getChannel("mds-user", 2)
+    if (!userChannel || !userChannel.deployId)
+      throw new Error("Failed to get deployed channel for hosting user image")
 
     // TODO: Destroy all message for channel for hosting user image
 
     // Destroy channel for hosting user image
-    await channelClient.destroyDiscordChannel(
-      discordClient,
-      userChannel.channelId
-    )
+    await channelClient.destroyChannel(discordClient, userChannel.deployId)
   }
 }

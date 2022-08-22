@@ -1,4 +1,4 @@
-import { PrismaClient, DiscordMessage, SlackUser } from "@prisma/client"
+import { PrismaClient, DiscordMessage, User } from "@prisma/client"
 import { access, readFile, constants, readdir } from "node:fs/promises"
 import { statSync } from "node:fs"
 import { join } from "node:path"
@@ -77,17 +77,11 @@ export class MessageClient {
           let messageType = 1
 
           // Get message author
-          let author: SlackUser | null = null
+          let author: User | null = null
           if (slackMessage.bot_id) {
-            author = await userClient.getSlackBot(
-              slackClient,
-              slackMessage.bot_id
-            )
+            author = await userClient.getBot(slackClient, slackMessage.bot_id)
           } else if (slackMessage.user) {
-            author = await userClient.getSlackUser(
-              slackClient,
-              slackMessage.user
-            )
+            author = await userClient.getUser(slackClient, slackMessage.user)
           }
           if (!author) throw new Error("Failed to get message author")
 
@@ -124,21 +118,21 @@ export class MessageClient {
   async deployAllMessage(discordClient: DiscordClient) {
     //  Get all slack channel data
     const channelClient = new ChannelClient(this.client)
-    const slackChannels = await channelClient.getAllSlackChannel()
+    const slackChannels = await channelClient.getAllChannel()
     for (const channel of slackChannels) {
-      const channelManager = discordClient.channels.cache.get(channel.channelId)
+      const channelManager = discordClient.channels.cache.get(channel.id)
       if (
         channelManager === undefined ||
         channelManager.type !== ChannelType.GuildText
       )
-        throw new Error(`Failed to get channel manager of ${channel.channelId}`)
+        throw new Error(`Failed to get channel manager of ${channel.id}`)
 
       // Pagination message
       const take = 100
       let skip = 0
       const total = await this.client.discordMessage.count({
         where: {
-          channelId: channel.channelId,
+          channelId: channel.id,
         },
       })
       while (skip < total) {
@@ -258,7 +252,7 @@ export class MessageClient {
         mention.replace(/<@|>/g, "")
       )
       for (const userId of userIds) {
-        const username = await userClient.getSlackUsername(userId)
+        const username = await userClient.getUsername(userId)
         if (username) {
           newContent = newContent.replaceAll(`<@${userId}>`, `@${username}`)
         } else {

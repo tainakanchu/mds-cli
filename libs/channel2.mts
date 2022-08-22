@@ -101,8 +101,8 @@ export class ChannelClient {
     // Deploy all category
     await this.categoryClient.deployAllCategory(discordClient)
     const category = option.isArchived
-      ? await this.categoryClient.getCategory("ARCHIVE", true)
-      : await this.categoryClient.getCategory("CHANNEL", true)
+      ? await this.categoryClient.getCategory("ARCHIVE_CATEGORY", true)
+      : await this.categoryClient.getCategory("DEFAULT_CATEGORY", true)
     if (!category?.deployId)
       throw new Error("Failed to get deployed init category")
 
@@ -139,12 +139,12 @@ export class ChannelClient {
   /**
    * Destroy single channel
    * @param discordClient
-   * @param channelId
+   * @param channelDeployId
    */
-  async destroyChannel(discordClient: DiscordClient, channelId: string) {
+  async destroyChannel(discordClient: DiscordClient, channelDeployId: string) {
     // Destroy discord channel
     try {
-      await discordClient.channels.delete(channelId)
+      await discordClient.channels.delete(channelDeployId)
     } catch (error) {
       if (error instanceof DiscordAPIError && error.code == 10003) {
         // Do not throw error if channel to be deleted does not exist
@@ -156,7 +156,7 @@ export class ChannelClient {
     // Delete channel data
     await this.client.channel.delete({
       where: {
-        id: channelId,
+        deployId: channelDeployId,
       },
     })
   }
@@ -309,14 +309,17 @@ export class ChannelClient {
         id: channel.id,
       },
       update: {
+        deployId: channel.deployId,
         name: channel.name,
         categoryDeployId: channel.categoryDeployId,
         type: channel.type,
         topic: channel.topic,
         isArchived: channel.isArchived,
+        pins: channel.pins,
       },
       create: {
         id: channel.id,
+        deployId: channel.deployId,
         name: channel.name,
         categoryDeployId: channel.categoryDeployId,
         type: channel.type,
