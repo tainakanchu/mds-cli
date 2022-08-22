@@ -60,7 +60,7 @@ interface Options {
 
   spinner.loading("Destroy channel")
   try {
-    await channelClient.destroyAllDiscordChannel(discordClient)
+    await channelClient.destroyAllChannel(discordClient)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)

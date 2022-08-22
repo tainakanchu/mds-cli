@@ -2,7 +2,7 @@ import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
 import retry from "async-retry"
 import { PrismaClient } from "@prisma/client"
-import type { DiscordCategory } from "@prisma/client"
+import type { Category } from "@prisma/client"
 
 export class CategoryClient {
   client: PrismaClient
@@ -11,27 +11,26 @@ export class CategoryClient {
   }
 
   /**
-   * Deploy many discord category
+   * Deploy all category
    * @param discordClient
-   * @param categoryNames
    */
-  async deployManyDiscordCategory(
-    discordClient: DiscordClient,
-    categoryNames: string[]
-  ) {
-    // Create many discord category
-    const discordCategories: DiscordCategory[] = await Promise.all(
-      categoryNames.map(async (categoryName) => {
+  async deployAllCategory(discordClient: DiscordClient) {
+    // Get all category data
+    const categories = await this.getAllCategory()
+
+    // Create all category
+    const newCategories: Category[] = await Promise.all(
+      categories.map(async (category) => {
         const newCategory = await retry(
           async () =>
             await discordClient.channels.create({
-              name: categoryName,
+              name: category.name,
               type: ChannelType.GuildCategory,
             })
         )
         return {
-          id: 0,
-          categoryId: newCategory.id,
+          id: category.id,
+          deployId: newCategory.id,
           name: newCategory.name,
           createdAt: newCategory.createdAt,
           updatedAt: newCategory.createdAt,
@@ -39,24 +38,24 @@ export class CategoryClient {
       })
     )
 
-    // Update many discord category data
-    await this.updateManyDiscordCategory(discordCategories)
-
-    return discordCategories
+    // Update all category data
+    await this.updateManyCategory(newCategories)
   }
 
   /**
-   * Destroy all discord category
+   * Destroy all category
    */
-  async destroyAllDiscordCategory(discordClient: DiscordClient) {
-    // Get all discord category data
-    const discordCategories = await this.client.discordCategory.findMany()
+  async destroyAllCategory(discordClient: DiscordClient) {
+    // Get all deployed category data
+    const categories = await this.getAllCategory(true)
 
     // Destroy all discord category
     await Promise.all(
-      discordCategories.map(async (category) => {
+      categories.map(async (category) => {
         try {
-          await discordClient.channels.delete(category.categoryId)
+          if (!category.deployId)
+            throw new Error("Failed to get is deployed category id")
+          await discordClient.channels.delete(category.deployId)
         } catch (error) {
           if (error instanceof DiscordAPIError && error.code == 10003) {
             // Do not throw error if category to be deleted does not exist
@@ -67,27 +66,35 @@ export class CategoryClient {
       })
     )
 
-    // Delete all discord category data
-    await this.client.discordCategory.deleteMany()
+    // Delete all category data
+    await this.client.category.deleteMany({
+      where: {
+        deployId: {
+          not: {
+            equals: null,
+          },
+        },
+      },
+    })
   }
 
   /**
-   * Update many discord category
+   * Update many category
    * @param categories
    */
-  async updateManyDiscordCategory(categories: DiscordCategory[]) {
+  async updateManyCategory(categories: Category[]) {
     const query = categories.map((category) =>
-      this.client.discordCategory.upsert({
+      this.client.category.upsert({
         where: {
-          categoryId: category.categoryId,
+          id: category.id,
         },
         update: {
-          categoryId: category.categoryId,
+          deployId: category.deployId,
           name: category.name,
-          updatedAt: category.updatedAt,
         },
         create: {
-          categoryId: category.categoryId,
+          id: category.id,
+          deployId: category.deployId,
           name: category.name,
           createdAt: category.createdAt,
           updatedAt: category.updatedAt,
@@ -98,13 +105,31 @@ export class CategoryClient {
   }
 
   /**
-   * Get single discord category data
-   * @param categoryName
+   * Get single category data
+   * @param categoryId
    */
-  async getDiscordCategory(categoryName: string) {
-    return await this.client.discordCategory.findFirst({
+  async getCategory(categoryId: string, isDeployed: boolean = false) {
+    return await this.client.category.findFirst({
       where: {
-        name: categoryName,
+        id: categoryId,
+        deployId: isDeployed ? { not: { equals: null } } : undefined,
+      },
+      orderBy: [
+        {
+          updatedAt: "desc",
+        },
+      ],
+    })
+  }
+
+  /**
+   * Get all category data
+   * @param isDeployed
+   */
+  async getAllCategory(isDeployed: boolean = false) {
+    return await this.client.category.findMany({
+      where: {
+        deployId: isDeployed ? { not: { equals: null } } : { equals: null },
       },
       orderBy: [
         {

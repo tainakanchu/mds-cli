@@ -7,41 +7,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model SlackChannel {
-  id              Int              @id @default(autoincrement())
-  name            String
-  channelId       String           @unique
-  type            Int
-  topic           String?
-  isArchived      Boolean
-  pins            String?
-  discordChannels DiscordChannel[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
+model Channel {
+  id               String   @id
+  deployId         String?  @unique
+  name             String
+  categoryDeployId String?
+  type             Int
+  topic            String?
+  isArchived       Boolean
+  pins             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
 }
 
-model DiscordChannel {
-  id              Int             @id @default(autoincrement())
-  name            String
-  channelId       String          @unique
-  categoryId      String
-  slackChannelId  String          @unique
-  type            Int
-  topic           String?
-  isArchived      Boolean
-  slackChannel    SlackChannel    @relation(fields: [slackChannelId], references: [channelId])
-  discordCategory DiscordCategory @relation(fields: [categoryId], references: [categoryId])
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @default(now()) @updatedAt
-}
-
-model DiscordCategory {
-  id              Int              @id @default(autoincrement())
-  name            String
-  categoryId      String           @unique
-  discordChannels DiscordChannel[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
+model Category {
+  id        String   @id
+  deployId  String?  @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model User {
