@@ -43,10 +43,7 @@ export class CategoryClient {
    * Destroy all category
    */
   async destroyAllCategory(discordClient: DiscordClient) {
-    // Get all deployed category data
     const categories = await this.getAllCategory(true)
-
-    // Destroy all discord category
     const newCategories = await Promise.all(
       categories.map(async (category) => {
         try {
@@ -67,11 +64,8 @@ export class CategoryClient {
         return newCategory
       })
     )
-
-    // Update all category data
     await this.updateManyCategory(newCategories)
 
-    // Delete all category data
     // await this.client.category.deleteMany({
     //   where: {
     //     deployId: {

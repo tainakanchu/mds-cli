@@ -46,23 +46,19 @@ export class MessageClient {
    * @param srcDirpath
    */
   async migrateAllMessage(slackClient: SlackClient, srcDirpath: string) {
-    // Get all channel data
     const channels = await this.channelClient.getAllChannel()
 
     for (const channel of channels) {
       if (!channel.deployId)
         throw new Error(`Failed to deployed channel id of ${channel.id}`)
 
-      // Get message file paths
       const messageDirPath = join(srcDirpath, channel.name)
       const messageFilePaths = await this.getAllSlackMessageFilePath(
         messageDirPath
       )
 
       for (const messageFilePath of messageFilePaths) {
-        // Get message file
         const messages = await this.getSlackMessageFile(messageFilePath)
-
         const newMessages: Message[] = []
         for (const message of messages) {
           if (
@@ -100,7 +96,6 @@ export class MessageClient {
           // TODO: Message type
           let messageType = 1
 
-          // Get message author
           let author: User | null = null
           if (message.bot_id) {
             author = await this.userClient.getBot(slackClient, message.bot_id)
@@ -126,8 +121,6 @@ export class MessageClient {
             updatedAt: new Date(),
           })
         }
-
-        // Update many message
         await this.updateManyMessage(newMessages)
       }
     }
@@ -138,7 +131,6 @@ export class MessageClient {
    * @param discordClient
    */
   async deployAllMessage(discordClient: DiscordClient) {
-    //  Get all channel data
     const channels = await this.channelClient.getAllChannel()
     for (const channel of channels) {
       if (!channel.deployId)
@@ -180,9 +172,7 @@ export class MessageClient {
           },
         })
 
-        // Deploy many message
         await this.deployManyMessage(channelManager, messages, maxFileSize)
-
         skip += take
       }
     }
@@ -230,7 +220,6 @@ export class MessageClient {
       },
     ]
 
-    //  Deploy message
     const sendMessage = await channelManager.send({
       embeds: [
         {
@@ -245,8 +234,6 @@ export class MessageClient {
         },
       ],
     })
-
-    // Update message
     const newMessage = (() => message)()
     newMessage.deployId = sendMessage.id
     await this.updateMessage(newMessage)
@@ -339,10 +326,7 @@ export class MessageClient {
               timestamp: "asc",
             },
           })
-
-          // Destroy many message
           await this.destroyManyMessage(channelManager, messages)
-
           skip += take
         }
       })
@@ -365,18 +349,14 @@ export class MessageClient {
             await channelManager.messages.unpin(message.deployId as string)
           }
 
-          // Destroy message
           // FIXME: Want to avoid forced type casting
           await channelManager.messages.delete(message.deployId as string)
 
           const newMessage = (() => message)()
           newMessage.deployId = null
-
           return newMessage
         })
     )
-
-    // Update deployed message
     await this.updateManyMessage(newMessages)
   }
 

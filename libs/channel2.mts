@@ -31,7 +31,6 @@ export class ChannelClient {
    * @param channelFilePath
    */
   async migrateChannel(channelFilePath: string) {
-    // Get slack channel file
     const slackChannels = await this.getSlackChannelFile(channelFilePath)
 
     // Convert channel data
@@ -58,7 +57,7 @@ export class ChannelClient {
       }
     })
 
-    // Update category data
+    // Create init category data
     await this.categoryClient.updateManyCategory([
       {
         id: "DEFAULT_CATEGORY",
@@ -76,7 +75,6 @@ export class ChannelClient {
       },
     ])
 
-    // Update channel data
     await this.updateManyChannel(newChannels)
   }
 
@@ -97,21 +95,18 @@ export class ChannelClient {
       isArchived: boolean
     } = { channelType: 1, isArchived: false }
   ) {
-    // Deploy all category
     const category = option.isArchived
       ? await this.categoryClient.getCategory("ARCHIVE_CATEGORY", true)
       : await this.categoryClient.getCategory("DEFAULT_CATEGORY", true)
     if (!category?.deployId)
       throw new Error("Failed to get deployed init category")
 
-    // Deploy channel
     const result = await discordClient.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
       topic: option.topic,
       parent: category.deployId,
     })
-
     const newChannel: Channel = {
       id: channelId,
       deployId: result.id,
@@ -125,9 +120,7 @@ export class ChannelClient {
       updatedAt: new Date(),
     }
 
-    // Update channel data
     await this.updateChannel(newChannel)
-
     return result
   }
 
@@ -140,7 +133,6 @@ export class ChannelClient {
     // Skip undeployed channel
     if (!channel.deployId) return
 
-    // Destroy discord channel
     try {
       await discordClient.channels.delete(channel.deployId)
     } catch (error) {
@@ -156,7 +148,6 @@ export class ChannelClient {
     newChannel.deployId = null
     await this.updateChannel(newChannel)
 
-    // Delete channel data
     // await this.client.channel.delete({
     //   where: {
     //     deployId: channelDeployId,
@@ -168,10 +159,7 @@ export class ChannelClient {
    * Deploy all channel
    */
   async deployAllChannel(discordClient: DiscordClient) {
-    // Get all channel data
     const channels = await this.getAllChannel()
-
-    // Deploy all category
     await this.categoryClient.deployAllCategory(discordClient)
     const defaultCategory = await this.categoryClient.getCategory(
       "DEFAULT_CATEGORY",
@@ -184,7 +172,6 @@ export class ChannelClient {
     if (!defaultCategory?.deployId || !archiveCategory?.deployId)
       throw new Error("Failed to deployed init category")
 
-    // Deploy all channel
     const newChannels: Channel[] = await Promise.all(
       channels.map(async (channel) => {
         const categoryDeployId = channel.isArchived
@@ -213,7 +200,6 @@ export class ChannelClient {
       })
     )
 
-    // Update all channel data
     await this.updateManyChannel(newChannels)
   }
 
@@ -221,10 +207,7 @@ export class ChannelClient {
    * Destroy all channel
    */
   async destroyAllChannel(discordClient: DiscordClient) {
-    // Get all deployed channel data
     const channels = await this.getAllChannel(true)
-
-    // Destroy all channel
     const newChannels = await Promise.all(
       channels.map(async (channel) => {
         try {
@@ -246,7 +229,6 @@ export class ChannelClient {
 
     await this.updateManyChannel(newChannels)
 
-    // Delete all channel data
     // await this.client.channel.deleteMany({
     //   where: {
     //     deployId: {
@@ -258,7 +240,6 @@ export class ChannelClient {
     //   },
     // })
 
-    // Destroy all category
     await this.categoryClient.destroyAllCategory(discordClient)
   }
 

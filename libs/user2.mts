@@ -32,7 +32,6 @@ export class UserClient {
    * @param userFilePath
    */
   async migrateUser(userFilePath: string) {
-    // Get user channel file
     const slackUsers = await this.getSlackUserFile(userFilePath)
 
     // Convert user data
@@ -67,8 +66,6 @@ export class UserClient {
         updatedAt: new Date(),
       }
     })
-
-    // Update user data
     await this.updateManyUser(newUsers)
   }
 
@@ -92,7 +89,6 @@ export class UserClient {
 
     // Get slack user from API
     const result = await slackClient.users.info({ user: userId })
-
     if (
       result.user?.id === undefined ||
       result.user.profile?.real_name === undefined ||
@@ -238,12 +234,10 @@ export class UserClient {
     // Deploy all user image
     const newUsers: User[] = []
     for (const user of users) {
-      // Upload user image to channel
       const message = await userChannel.send({
         content: user.name,
         files: [user.imageUrl],
       })
-
       newUsers.push({
         id: user.id,
         appId: user.appId,
@@ -259,8 +253,6 @@ export class UserClient {
         updatedAt: new Date(),
       })
     }
-
-    // Update user data
     await this.updateManyUser(newUsers)
   }
 
@@ -268,14 +260,12 @@ export class UserClient {
    * Destroy channel for hosting user image
    */
   async destroyUserImageChannel(discordClient: DiscordClient) {
-    //  Get channel for hosting user image
     const userChannel = await this.channelClient.getChannel("mds-user", 2)
     if (!userChannel || !userChannel.deployId)
       throw new Error("Failed to get deployed channel for hosting user image")
 
     // TODO: Destroy all message for channel for hosting user image
 
-    // Destroy channel for hosting user image
     await this.channelClient.destroyChannel(discordClient, userChannel)
   }
 }
