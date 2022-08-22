@@ -210,8 +210,6 @@ export class UserClient {
           imageUrl: user.imageUrl,
           isBot: user.isBot,
           isDeleted: user.isDeleted,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
         },
       })
     )
@@ -257,8 +255,8 @@ export class UserClient {
         imageUrl: message.attachments.map((file) => file.url)[0],
         isBot: user.isBot,
         isDeleted: user.isDeleted,
-        createdAt: message.createdAt,
-        updatedAt: message.createdAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       })
     }
 

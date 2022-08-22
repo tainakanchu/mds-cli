@@ -99,7 +99,6 @@ export class ChannelClient {
     } = { channelType: 1, isArchived: false }
   ) {
     // Deploy all category
-    await this.categoryClient.deployAllCategory(discordClient)
     const category = option.isArchived
       ? await this.categoryClient.getCategory("ARCHIVE_CATEGORY", true)
       : await this.categoryClient.getCategory("DEFAULT_CATEGORY", true)
@@ -126,8 +125,8 @@ export class ChannelClient {
       topic: result.topic || null,
       isArchived: option.isArchived,
       pins: null,
-      createdAt: result.createdAt,
-      updatedAt: result.createdAt,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
 
     // Update channel data
@@ -215,8 +214,8 @@ export class ChannelClient {
           topic: result.topic,
           isArchived: channel.isArchived,
           pins: channel.pins,
-          createdAt: result.createdAt,
-          updatedAt: result.createdAt,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
       })
     )
@@ -340,8 +339,6 @@ export class ChannelClient {
         topic: channel.topic,
         isArchived: channel.isArchived,
         pins: channel.pins,
-        createdAt: channel.createdAt,
-        updatedAt: channel.updatedAt,
       },
     })
   }
@@ -365,8 +362,6 @@ export class ChannelClient {
           topic: channel.topic,
           isArchived: channel.isArchived,
           pins: channel.pins,
-          createdAt: channel.createdAt,
-          updatedAt: channel.updatedAt,
         },
         create: {
           id: channel.id,
@@ -377,8 +372,6 @@ export class ChannelClient {
           topic: channel.topic,
           isArchived: channel.isArchived,
           pins: channel.pins,
-          createdAt: channel.createdAt,
-          updatedAt: channel.updatedAt,
         },
       })
     })

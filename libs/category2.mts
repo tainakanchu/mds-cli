@@ -32,8 +32,8 @@ export class CategoryClient {
           id: category.id,
           deployId: newCategory.id,
           name: newCategory.name,
-          createdAt: newCategory.createdAt,
-          updatedAt: newCategory.createdAt,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }
       })
     )
@@ -104,8 +104,6 @@ export class CategoryClient {
           id: category.id,
           deployId: category.deployId,
           name: category.name,
-          createdAt: category.createdAt,
-          updatedAt: category.updatedAt,
         },
       })
     )

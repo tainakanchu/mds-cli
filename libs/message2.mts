@@ -401,8 +401,6 @@ export class MessageClient {
         authorType: message.authorType,
         authorColor: message.authorColor,
         authorImageUrl: message.authorImageUrl,
-        createdAt: message.createdAt,
-        updatedAt: message.updatedAt,
       },
     })
   }
@@ -441,8 +439,6 @@ export class MessageClient {
           authorType: message.authorType,
           authorColor: message.authorColor,
           authorImageUrl: message.authorImageUrl,
-          createdAt: message.createdAt,
-          updatedAt: message.updatedAt,
         },
       })
     )
