@@ -53,10 +53,10 @@ export class UserClient {
         botId: user.profile.bot_id || null,
         name: user.is_bot ? user.profile.real_name : user.profile.display_name,
         type: user.is_bot
-          ? 1 // Bot
+          ? 3 // Bot
           : user.deleted
-          ? 3 // Cancel user
-          : 2, // Active user
+          ? 2 // Cancel user
+          : 1, // Active user
         color: user.color ? parseInt(user.color, 16) : parseInt("808080", 16),
         email: user.profile.email || null,
         imageUrl: user.profile.image_512,
@@ -107,7 +107,7 @@ export class UserClient {
       name: result.user.is_bot
         ? result.user.profile.real_name
         : result.user.profile.display_name,
-      type: 1,
+      type: result.user.deleted ? 2 : 1,
       color: result.user.color
         ? parseInt(result.user.color, 16)
         : parseInt("808080", 16),
@@ -126,13 +126,14 @@ export class UserClient {
    * Get bot
    * @param botId
    */
-  async getBot(slackClient: SlackClient, botId: string) {
+  async getBot(slackClient: SlackClient, botId: string, appId?: string) {
     let bot: User | null = null
 
     bot = await this.client.user.findFirst({
       where: {
-        botId: botId,
-        type: 1,
+        botId: appId ? undefined : botId,
+        appId: appId,
+        type: 3,
       },
     })
     if (bot) return bot
@@ -142,7 +143,7 @@ export class UserClient {
       bot = await this.client.user.findFirst({
         where: {
           appId: result.bot.app_id,
-          type: 1,
+          type: 3,
         },
       })
     }

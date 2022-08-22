@@ -98,7 +98,11 @@ export class MessageClient {
 
           let author: User | null = null
           if (message.bot_id) {
-            author = await this.userClient.getBot(slackClient, message.bot_id)
+            author = await this.userClient.getBot(
+              slackClient,
+              message.bot_id,
+              message.app_id
+            )
           } else if (message.user) {
             author = await this.userClient.getUser(slackClient, message.user)
           }
@@ -209,9 +213,9 @@ export class MessageClient {
     const postTime = format(parseFloat(message.timestamp), " HH:mm")
     const isoPostDatetime = formatISO(parseFloat(message.timestamp))
 
-    let authorTypeIcon: "🤖" | "🔵" | "🟢" = "🟢"
-    if (message.authorType === 1) authorTypeIcon = "🤖"
+    let authorTypeIcon: "🟢" | "🔵" | "🤖" = "🟢"
     if (message.authorType === 2) authorTypeIcon = "🔵"
+    if (message.authorType === 3) authorTypeIcon = "🤖"
 
     const fields: Embed["fields"] = [
       {
