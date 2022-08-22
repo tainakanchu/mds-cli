@@ -112,7 +112,7 @@ export class CategoryClient {
     return await this.client.category.findFirst({
       where: {
         id: categoryId,
-        deployId: isDeployed ? { not: { equals: null } } : { equals: null },
+        deployId: isDeployed ? { not: { equals: null } } : undefined,
       },
       orderBy: [
         {
@@ -129,7 +129,7 @@ export class CategoryClient {
   async getAllCategory(isDeployed: boolean = false) {
     return await this.client.category.findMany({
       where: {
-        deployId: isDeployed ? { not: { equals: null } } : { equals: null },
+        deployId: isDeployed ? { not: { equals: null } } : undefined,
       },
       orderBy: [
         {

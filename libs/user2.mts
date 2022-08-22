@@ -21,8 +21,10 @@ interface SlackUserChannelFile {
 
 export class UserClient {
   client: PrismaClient
+  channelClient: ChannelClient
   constructor(client = new PrismaClient()) {
     this.client = client
+    this.channelClient = new ChannelClient(this.client)
   }
 
   /**
@@ -221,8 +223,7 @@ export class UserClient {
    */
   async deployUserImageChannel(discordClient: DiscordClient) {
     // Deploy channel for hosting user image
-    const channelClient = new ChannelClient(this.client)
-    const userChannel = await channelClient.deployChannel(
+    const userChannel = await this.channelClient.deployChannel(
       discordClient,
       "mds-user",
       "C0000000000",
@@ -270,14 +271,13 @@ export class UserClient {
    */
   async destroyUserImageChannel(discordClient: DiscordClient) {
     //  Get channel for hosting user image
-    const channelClient = new ChannelClient(this.client)
-    const userChannel = await channelClient.getChannel("mds-user", 2)
+    const userChannel = await this.channelClient.getChannel("mds-user", 2)
     if (!userChannel || !userChannel.deployId)
       throw new Error("Failed to get deployed channel for hosting user image")
 
     // TODO: Destroy all message for channel for hosting user image
 
     // Destroy channel for hosting user image
-    await channelClient.destroyChannel(discordClient, userChannel.deployId)
+    await this.channelClient.destroyChannel(discordClient, userChannel.deployId)
   }
 }

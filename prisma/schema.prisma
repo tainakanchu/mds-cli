@@ -43,19 +43,18 @@ model User {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
-model DiscordMessage {
-  id             Int      @id @default(autoincrement())
-  messageId      String?  @unique
-  channelId      String?
-  content        String
-  type           Int
-  isPinned       Boolean
-  timestamp      DateTime @unique
-  authorId       String
-  authorType     Int
-  authorColor    Int
-  authorName     String
-  authorImageUrl String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now()) @updatedAt
+model Message {
+  timestamp       DateTime @id
+  deployId        String?  @unique
+  channelDeployId String
+  content         String
+  type            Int
+  isPinned        Boolean
+  authorId        String
+  authorType      Int
+  authorColor     Int
+  authorName      String
+  authorImageUrl  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 }

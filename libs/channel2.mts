@@ -294,7 +294,7 @@ export class ChannelClient {
     return await this.client.channel.findMany({
       where: {
         type: 1,
-        deployId: isDeployed ? { not: { equals: null } } : { equals: null },
+        deployId: isDeployed ? { not: { equals: null } } : undefined,
       },
     })
   }
