@@ -50,6 +50,8 @@ model SlackUser {
   appId       String?       @unique
   botId       String?       @unique
   name        String
+  type        Int
+  color       Int
   email       String?       @unique
   imageUrl    String
   isBot       Boolean
@@ -75,15 +77,17 @@ model DiscordUser {
 
 model DiscordMessage {
   id             Int      @id @default(autoincrement())
-  messageId      String   @unique
+  messageId      String?  @unique
   channelId      String?
   content        String
   type           Int
   isPinned       Boolean
-  timestamp      String
-  authorId       String?
-  authorName     String?
-  authorImageUrl String?
+  timestamp      DateTime @unique
+  authorId       String
+  authorType     Int
+  authorColor    Int
+  authorName     String
+  authorImageUrl String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
 }

@@ -50,7 +50,7 @@ interface Options {
   }
   spinner.success()
 
-  spinner.loading("Deploy discord channel")
+  spinner.loading("Deploy channel")
   try {
     await channelClient.deployAllDiscordChannel(discordClient)
   } catch (error) {

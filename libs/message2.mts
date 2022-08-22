@@ -1,10 +1,16 @@
-import { PrismaClient, DiscordMessage } from "@prisma/client"
+import { PrismaClient, DiscordMessage, SlackUser } from "@prisma/client"
 import { access, readFile, constants, readdir } from "node:fs/promises"
 import { statSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { v4 as uuidv4 } from "uuid"
+import { join } from "node:path"
+import { format, formatISO, fromUnixTime } from "date-fns"
+import retry from "async-retry"
 import { WebClient as SlackClient } from "@slack/web-api"
-import type { Guild as DiscordClient } from "discord.js"
+import { ChannelType, EmbedType } from "discord.js"
+import type {
+  Guild as DiscordClient,
+  TextChannel,
+  APIEmbed as Embed,
+} from "discord.js"
 import { ChannelClient } from "./channel2.mjs"
 import { UserClient } from "./user2.mjs"
 
@@ -71,31 +77,34 @@ export class MessageClient {
           let messageType = 1
 
           // Get message author
-          const authorId = slackMessage.bot_id
-            ? slackMessage.app_id
-            : slackMessage.user
-          if (!authorId) throw new Error(`Failed to get message author id`)
-          const author =
-            slackMessage.bot_id && slackMessage.app_id
-              ? await userClient.getSlackBot(
-                  slackClient,
-                  slackMessage.bot_id,
-                  slackMessage.app_id
-                )
-              : await userClient.getSlackUser(authorId)
-          if (!author)
-            throw new Error(`Failed to get message author of ${authorId}`)
+          let author: SlackUser | null = null
+          if (slackMessage.bot_id) {
+            author = await userClient.getSlackBot(
+              slackClient,
+              slackMessage.bot_id
+            )
+          } else if (slackMessage.user) {
+            author = await userClient.getSlackUser(
+              slackClient,
+              slackMessage.user
+            )
+          }
+          if (!author) throw new Error("Failed to get message author")
+
+          // TODO:Replace author image url
 
           discordMessages.push({
             id: 0,
-            messageId: uuidv4(),
+            messageId: null,
             channelId: slackChannel.channelId,
             content: content,
             type: messageType,
             isPinned: isPinned,
-            timestamp: slackMessage.ts,
+            timestamp: fromUnixTime(Number(slackMessage.ts)),
             authorId: author.userId,
             authorName: author.name,
+            authorType: author.type,
+            authorColor: author.color,
             authorImageUrl: author.imageUrl,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -105,6 +114,102 @@ export class MessageClient {
         // Update many discord message
         await this.updateManyDiscordMessage(discordMessages)
       }
+    }
+  }
+
+  /**
+   * Deploy all message
+   * @param discordClient
+   */
+  async deployAllMessage(discordClient: DiscordClient) {
+    //  Get all slack channel data
+    const channelClient = new ChannelClient(this.client)
+    const slackChannels = await channelClient.getAllSlackChannel()
+    for (const channel of slackChannels) {
+      const channelManager = discordClient.channels.cache.get(channel.channelId)
+      if (
+        channelManager === undefined ||
+        channelManager.type !== ChannelType.GuildText
+      )
+        throw new Error(`Failed to get channel manager of ${channel.channelId}`)
+
+      // Pagination message
+      const take = 100
+      let skip = 0
+      const total = await this.client.discordMessage.count({
+        where: {
+          channelId: channel.channelId,
+        },
+      })
+      while (skip < total) {
+        const messages = await this.client.discordMessage.findMany({
+          take: take,
+          skip: skip,
+          where: {
+            channelId: channel.channelId,
+          },
+          orderBy: {
+            timestamp: "asc",
+          },
+        })
+
+        // Deploy many message
+        await this.deployManyMessage(channelManager, messages)
+
+        skip += take
+      }
+    }
+  }
+
+  /**
+   * Deploy many message
+   * @param channelManager
+   * @param messages
+   */
+  async deployManyMessage(
+    channelManager: TextChannel,
+    messages: DiscordMessage[]
+  ) {
+    for (const message of messages) {
+      // Get post datetime of message
+      const postTime = format(message.timestamp, " HH:mm")
+      const isoPostDatetime = formatISO(message.timestamp)
+
+      let authorTypeIcon: "🤖" | "🔵" | "🟢" = "🟢"
+      if (message.authorType === 1) authorTypeIcon = "🤖"
+      if (message.authorType === 2) authorTypeIcon = "🔵"
+
+      const fields: Embed["fields"] = [
+        {
+          name: "------------------------------------------------",
+          value: message.content,
+        },
+      ]
+
+      //  Deploy message
+      const sendMessage = await retry(
+        async () =>
+          await channelManager.send({
+            embeds: [
+              {
+                type: EmbedType.Rich,
+                color: message.authorColor,
+                fields: fields,
+                timestamp: isoPostDatetime,
+                // FIXME: Type guard not working
+                author: {
+                  name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
+                  icon_url: message.authorImageUrl,
+                },
+              },
+            ],
+          })
+      )
+
+      // Update message
+      const newMessage = message
+      newMessage.messageId = sendMessage.id
+      await this.updateDiscordMessage(newMessage)
     }
   }
 
@@ -190,6 +295,46 @@ export class MessageClient {
   }
 
   /**
+   *  Update single dicord message
+   * @param message
+   */
+  async updateDiscordMessage(message: DiscordMessage) {
+    return await this.client.discordMessage.upsert({
+      where: {
+        timestamp: message.timestamp,
+      },
+      update: {
+        messageId: message.messageId,
+        channelId: message.channelId,
+        content: message.content,
+        type: message.type,
+        isPinned: message.isPinned,
+        timestamp: message.timestamp,
+        authorId: message.authorId,
+        authorName: message.authorName,
+        authorType: message.authorType,
+        authorColor: message.authorColor,
+        authorImageUrl: message.authorImageUrl,
+      },
+      create: {
+        messageId: message.messageId,
+        channelId: message.channelId,
+        content: message.content,
+        type: message.type,
+        isPinned: message.isPinned,
+        timestamp: message.timestamp,
+        authorId: message.authorId,
+        authorName: message.authorName,
+        authorType: message.authorType,
+        authorColor: message.authorColor,
+        authorImageUrl: message.authorImageUrl,
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt,
+      },
+    })
+  }
+
+  /**
    * Update many dicord message
    * @param messages
    */
@@ -197,7 +342,7 @@ export class MessageClient {
     const query = messages.map((message) =>
       this.client.discordMessage.upsert({
         where: {
-          messageId: message.messageId,
+          timestamp: message.timestamp,
         },
         update: {
           messageId: message.messageId,
@@ -208,6 +353,8 @@ export class MessageClient {
           timestamp: message.timestamp,
           authorId: message.authorId,
           authorName: message.authorName,
+          authorType: message.authorType,
+          authorColor: message.authorColor,
           authorImageUrl: message.authorImageUrl,
         },
         create: {
@@ -219,6 +366,8 @@ export class MessageClient {
           timestamp: message.timestamp,
           authorId: message.authorId,
           authorName: message.authorName,
+          authorType: message.authorType,
+          authorColor: message.authorColor,
           authorImageUrl: message.authorImageUrl,
           createdAt: message.createdAt,
           updatedAt: message.updatedAt,

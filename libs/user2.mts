@@ -2,13 +2,13 @@ import { PrismaClient, SlackUser, DiscordUser } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
 import type { Guild as DiscordClient } from "discord.js"
 import { WebClient as SlackClient } from "@slack/web-api"
-import retry from "async-retry"
 import { ChannelClient } from "./channel2.mjs"
 
 interface SlackUserChannelFile {
   id?: string
   is_bot?: boolean
   deleted?: boolean
+  color?: string
   profile?: {
     bot_id?: string
     api_app_id?: string
@@ -52,6 +52,12 @@ export class UserClient {
         appId: user.profile.api_app_id || null,
         botId: user.profile.bot_id || null,
         name: user.is_bot ? user.profile.real_name : user.profile.display_name,
+        type: user.is_bot
+          ? 1 // Bot
+          : user.deleted
+          ? 3 // Cancel user
+          : 2, // Active user
+        color: user.color ? parseInt(user.color, 16) : parseInt("808080", 16),
         email: user.profile.email || null,
         imageUrl: user.profile.image_512,
         isBot: user.is_bot,
@@ -69,33 +75,22 @@ export class UserClient {
    * Get slack user
    * @param userId
    */
-  async getSlackUser(userId: string) {
-    return await this.client.slackUser.findFirst({
+  async getSlackUser(slackClient: SlackClient, userId: string) {
+    let user: SlackUser | null = null
+
+    // Get slack bot
+    user = await this.client.slackUser.findFirst({
       where: {
         userId: userId,
-      },
-    })
-  }
-
-  /**
-   * Get slack bot
-   * @param botId
-   * @param appId
-   */
-  async getSlackBot(slackClient: SlackClient, botId: string, appId: string) {
-    // Get slack bot
-    let bot: SlackUser | null = await this.client.slackUser.findFirst({
-      where: {
-        appId: appId,
       },
       orderBy: {
         updatedAt: "desc",
       },
     })
-    if (bot) return bot
+    if (user) return user
 
-    // Get slack bot from API
-    const result = await slackClient.users.info({ user: botId })
+    // Get slack user from API
+    const result = await slackClient.users.info({ user: userId })
 
     if (
       result.user?.id === undefined ||
@@ -108,7 +103,7 @@ export class UserClient {
     )
       return null
 
-    bot = {
+    user = {
       id: 0,
       userId: result.user.id,
       appId: result.user.profile.api_app_id || null,
@@ -116,6 +111,10 @@ export class UserClient {
       name: result.user.is_bot
         ? result.user.profile.real_name
         : result.user.profile.display_name,
+      type: 1,
+      color: result.user.color
+        ? parseInt(result.user.color, 16)
+        : parseInt("808080", 16),
       email: result.user.profile.email || null,
       imageUrl: result.user?.profile.image_512,
       isBot: result.user.is_bot,
@@ -124,7 +123,46 @@ export class UserClient {
       updatedAt: new Date(),
     }
 
+    return user
+  }
+
+  /**
+   * Get slack bot
+   * @param botId
+   */
+  async getSlackBot(slackClient: SlackClient, botId: string) {
+    let bot: SlackUser | null = null
+
+    bot = await this.client.slackUser.findFirst({
+      where: {
+        botId: botId,
+        type: 1,
+      },
+    })
+    if (bot) return bot
+
+    const result = await slackClient.bots.info({ bot: botId })
+    if (result.bot?.app_id) {
+      bot = await this.client.slackUser.findFirst({
+        where: {
+          appId: result.bot.app_id,
+          type: 1,
+        },
+      })
+    }
     return bot
+  }
+
+  /**
+   * Get discord user
+   * @param userId
+   */
+  async getDiscordUser(userId: string) {
+    return await this.client.discordUser.findFirst({
+      where: {
+        userId: userId,
+      },
+    })
   }
 
   /**
@@ -166,6 +204,8 @@ export class UserClient {
           appId: user.appId,
           botId: user.botId,
           name: user.name,
+          type: user.type,
+          color: user.color,
           email: user.email,
           imageUrl: user.imageUrl,
           isBot: user.isBot,
@@ -176,6 +216,8 @@ export class UserClient {
           appId: user.appId,
           botId: user.botId,
           name: user.name,
+          type: user.type,
+          color: user.color,
           email: user.email,
           imageUrl: user.imageUrl,
           isBot: user.isBot,

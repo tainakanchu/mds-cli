@@ -1,10 +1,9 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import type { Guild as DiscordClient } from "discord.js"
-import prompts from "prompts"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { ChannelClient } from "../../libs/channel2.mjs"
+import { MessageClient } from "../../libs/message2.mjs"
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
@@ -15,16 +14,9 @@ interface Options {
 }
 
 ;(async () => {
-  const confirm = await prompts({
-    type: "confirm",
-    name: "value",
-    message: "Destroy channel?",
-  })
-  if (!confirm.value) process.exit(0)
-
   const program = new Command()
   program
-    .description("Destroy channel command")
+    .description("Deploy messsage command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -47,10 +39,10 @@ interface Options {
   spinner.success()
 
   spinner.loading("Create client")
-  let channelClient: ChannelClient | undefined = undefined
-  let discordClient: DiscordClient | null = null
+  let messageClient: MessageClient | undefined = undefined
+  let discordClient: DiscordClient | undefined = undefined
   try {
-    channelClient = new ChannelClient()
+    messageClient = new MessageClient()
     discordClient = await createDiscordClient(discordBotToken, discordServerId)
   } catch (error) {
     spinner.failed(null, error)
@@ -58,9 +50,9 @@ interface Options {
   }
   spinner.success()
 
-  spinner.loading("Destroy channel")
+  spinner.loading("Deploy message")
   try {
-    await channelClient.destroyAllDiscordChannel(discordClient)
+    await messageClient.deployAllMessage(discordClient)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)
