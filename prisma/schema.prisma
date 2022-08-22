@@ -44,7 +44,7 @@ model User {
 }
 
 model Message {
-  timestamp       DateTime @id
+  timestamp       String   @id
   deployId        String?  @unique
   channelDeployId String
   content         String?

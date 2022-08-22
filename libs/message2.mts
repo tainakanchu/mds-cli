@@ -2,7 +2,7 @@ import { PrismaClient, Message, User } from "@prisma/client"
 import { access, readFile, constants, readdir } from "node:fs/promises"
 import { statSync } from "node:fs"
 import { join } from "node:path"
-import { format, formatISO, fromUnixTime, addSeconds } from "date-fns"
+import { format, formatISO } from "date-fns"
 import { WebClient as SlackClient } from "@slack/web-api"
 import { FileElement } from "@slack/web-api/dist/response/ChatPostMessageResponse"
 import { ChannelType, EmbedType } from "discord.js"
@@ -105,7 +105,7 @@ export class MessageClient {
           if (!author) throw new Error("Failed to get message author")
 
           newMessages.push({
-            timestamp: fromUnixTime(Number(message.ts)),
+            timestamp: message.ts,
             deployId: null,
             channelDeployId: channel.deployId,
             content: content,
@@ -206,8 +206,8 @@ export class MessageClient {
     maxFileSize: 8000000 | 50000000 | 100000000
   ) {
     // Get post datetime of message
-    const postTime = format(message.timestamp, " HH:mm")
-    const isoPostDatetime = formatISO(message.timestamp)
+    const postTime = format(parseFloat(message.timestamp), " HH:mm")
+    const isoPostDatetime = formatISO(parseFloat(message.timestamp))
 
     let authorTypeIcon: "🤖" | "🔵" | "🟢" = "🟢"
     if (message.authorType === 1) authorTypeIcon = "🤖"
@@ -279,9 +279,10 @@ export class MessageClient {
 
     // Update message with file
     const newMessage = (() => message)()
-    // Add 1 second to prevent duplicate timestamp
-    newMessage.timestamp = addSeconds(new Date(), 1)
+    // Add 2 micro second to prevent duplicate timestamp
+    newMessage.timestamp = String(parseFloat(newMessage.timestamp) + 0.000002)
     newMessage.deployId = sendMessage.id
+    newMessage.content = null
     await this.updateMessage(newMessage)
   }
 
