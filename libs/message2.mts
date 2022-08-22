@@ -10,6 +10,7 @@ import type {
   Guild as DiscordClient,
   TextChannel,
   APIEmbed as Embed,
+  Message as MessageManager,
 } from "discord.js"
 import { ChannelClient } from "./channel2.mjs"
 import { UserClient } from "./user2.mjs"
@@ -23,6 +24,11 @@ interface SlackMessageFile {
   bot_id?: string
   app_id?: string
   files?: FileElement[]
+  thread_ts?: string
+  replies?: {
+    user: string
+    ts: string
+  }[]
 }
 
 interface File {
@@ -112,10 +118,12 @@ export class MessageClient {
             timestamp: message.ts,
             deployId: null,
             channelDeployId: channel.deployId,
+            threadId: message.thread_ts || null,
             content: content,
             files: files,
             type: messageType,
             isPinned: isPinned,
+            isReplyed: message.thread_ts && !message.replies ? true : false,
             authorId: author.id,
             authorName: author.name,
             authorType: author.type,
@@ -223,23 +231,42 @@ export class MessageClient {
         value: message.content || "",
       },
     ]
-
-    const sendMessage = await channelManager.send({
-      embeds: [
-        {
-          type: EmbedType.Rich,
-          color: message.authorColor,
-          fields: fields,
-          timestamp: isoPostDatetime,
-          author: {
-            name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
-            icon_url: message.authorImageUrl,
-          },
+    const embeds: Embed[] = [
+      {
+        type: EmbedType.Rich,
+        color: message.authorColor,
+        fields: fields,
+        timestamp: isoPostDatetime,
+        author: {
+          name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
+          icon_url: message.authorImageUrl,
         },
-      ],
-    })
+      },
+    ]
+
     const newMessage = (() => message)()
-    newMessage.deployId = sendMessage.id
+    let messageManager: MessageManager | undefined = undefined
+    if (message.isReplyed && message.threadId) {
+      const threadMessage = await this.client.message.findFirst({
+        where: {
+          timestamp: message.threadId,
+        },
+      })
+      if (!threadMessage || !threadMessage.deployId)
+        throw new Error("Failed to get thread message")
+
+      messageManager = await channelManager.messages.cache
+        .get(threadMessage.deployId)
+        ?.reply({
+          embeds: embeds,
+        })
+    } else {
+      messageManager = await channelManager.send({
+        embeds: embeds,
+      })
+    }
+    if (!messageManager) throw new Error("Failed to deploy message")
+    newMessage.deployId = messageManager.id
     await this.updateMessage(newMessage)
 
     // Deploy attached file as separate message so that attached file show below embed
@@ -250,7 +277,7 @@ export class MessageClient {
 
     // Deploy pinned item
     if (message.isPinned) {
-      await sendMessage.pin()
+      await messageManager.pin()
     }
   }
 
@@ -286,7 +313,6 @@ export class MessageClient {
     // Add 2 micro second to prevent duplicate timestamp
     newMessage.timestamp = String(parseFloat(newMessage.timestamp) + 0.000002)
     newMessage.deployId = sendMessage.id
-    newMessage.content = null
     await this.updateMessage(newMessage)
   }
 
@@ -459,10 +485,12 @@ export class MessageClient {
         timestamp: message.timestamp,
         deployId: message.deployId,
         channelDeployId: message.channelDeployId,
+        threadId: message.threadId,
         content: message.content,
         files: message.files,
         type: message.type,
         isPinned: message.isPinned,
+        isReplyed: message.isReplyed,
         authorId: message.authorId,
         authorName: message.authorName,
         authorType: message.authorType,
@@ -473,10 +501,12 @@ export class MessageClient {
         timestamp: message.timestamp,
         deployId: message.deployId,
         channelDeployId: message.channelDeployId,
+        threadId: message.threadId,
         content: message.content,
         files: message.files,
         type: message.type,
         isPinned: message.isPinned,
+        isReplyed: message.isReplyed,
         authorId: message.authorId,
         authorName: message.authorName,
         authorType: message.authorType,
@@ -499,10 +529,12 @@ export class MessageClient {
         update: {
           deployId: message.deployId,
           channelDeployId: message.channelDeployId,
+          threadId: message.threadId,
           content: message.content,
           files: message.files,
           type: message.type,
           isPinned: message.isPinned,
+          isReplyed: message.isReplyed,
           authorId: message.authorId,
           authorName: message.authorName,
           authorType: message.authorType,
@@ -513,10 +545,12 @@ export class MessageClient {
           timestamp: message.timestamp,
           deployId: message.deployId,
           channelDeployId: message.channelDeployId,
+          threadId: message.threadId,
           content: message.content,
           files: message.files,
           type: message.type,
           isPinned: message.isPinned,
+          isReplyed: message.isReplyed,
           authorId: message.authorId,
           authorName: message.authorName,
           authorType: message.authorType,
