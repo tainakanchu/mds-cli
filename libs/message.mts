@@ -240,10 +240,16 @@ export class MessageClient {
 
     // Whether message has attached file only
     if (message.content) {
+      // FIXME: As an interim workaround, Embed cannot save message longer than 1024 characters and will truncate them
+      const content =
+        message.content.length > 1024
+          ? message.content.substring(0, 1021) + "..."
+          : message.content
+
       const fields: Embed["fields"] = [
         {
           name: "------------------------------------------------",
-          value: message.content,
+          value: content,
         },
       ]
 
