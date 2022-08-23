@@ -235,62 +235,66 @@ export class MessageClient {
     if (message.authorType === 2) authorTypeIcon = "🔵"
     if (message.authorType === 3) authorTypeIcon = "🤖"
 
-    const fields: Embed["fields"] = [
-      {
-        name: "------------------------------------------------",
-        value: message.content || "",
-      },
-    ]
-    const embeds: Embed[] = [
-      {
-        type: EmbedType.Rich,
-        color: message.authorColor,
-        fields: fields,
-        timestamp: isoPostDatetime,
-        author: {
-          name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
-          icon_url: message.authorImageUrl,
+    // Whether message has attached file only
+    if (message.content) {
+      const fields: Embed["fields"] = [
+        {
+          name: "------------------------------------------------",
+          value: message.content,
         },
-      },
-    ]
+      ]
 
-    const newMessage = (() => message)()
-    let messageManager: MessageManager | undefined = undefined
-
-    // Whether it is reply message
-    if (message.isReplyed && message.threadId) {
-      const threadMessage = await this.client.message.findFirst({
-        where: {
-          timestamp: message.threadId,
+      const embeds: Embed[] = [
+        {
+          type: EmbedType.Rich,
+          color: message.authorColor,
+          fields: fields,
+          timestamp: isoPostDatetime,
+          author: {
+            name: `${authorTypeIcon} ${message.authorName}    ${postTime}`,
+            icon_url: message.authorImageUrl,
+          },
         },
-      })
-      if (!threadMessage || !threadMessage.deployId)
-        throw new Error("Failed to get thread message")
+      ]
 
-      messageManager = await channelManager.messages.cache
-        .get(threadMessage.deployId)
-        ?.reply({
+      const newMessage = (() => message)()
+      let messageManager: MessageManager | undefined = undefined
+
+      // Whether it is reply message
+      if (message.isReplyed && message.threadId) {
+        const threadMessage = await this.client.message.findFirst({
+          where: {
+            timestamp: message.threadId,
+          },
+        })
+        if (!threadMessage || !threadMessage.deployId)
+          throw new Error("Failed to get thread message")
+
+        messageManager = await channelManager.messages.cache
+          .get(threadMessage.deployId)
+          ?.reply({
+            embeds: embeds,
+          })
+      } else {
+        messageManager = await channelManager.send({
           embeds: embeds,
         })
-    } else {
-      messageManager = await channelManager.send({
-        embeds: embeds,
-      })
+      }
+      if (!messageManager) throw new Error("Failed to deploy message")
+      newMessage.deployId = messageManager.id
+      await this.updateMessage(newMessage)
+
+      // Deploy pinned item
+      if (message.isPinned) {
+        await messageManager.pin()
+      }
     }
-    if (!messageManager) throw new Error("Failed to deploy message")
-    newMessage.deployId = messageManager.id
-    await this.updateMessage(newMessage)
 
     // Deploy attached file as separate message so that attached file show below embed
     if (message.files) {
       const files = JSON.parse(message.files) as File[]
       if (files.length)
         await this.deployManyFile(channelManager, message, files, maxFileSize)
-    }
-
-    // Deploy pinned item
-    if (message.isPinned) {
-      await messageManager.pin()
     }
   }
 
@@ -327,6 +331,11 @@ export class MessageClient {
     newMessage.timestamp = String(parseFloat(newMessage.timestamp) + 0.000002)
     newMessage.deployId = sendMessage.id
     await this.updateMessage(newMessage)
+
+    // Deploy pinned item
+    if (!message.content && message.isPinned) {
+      await sendMessage.pin()
+    }
   }
 
   /**

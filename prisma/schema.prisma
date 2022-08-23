@@ -48,7 +48,7 @@ model Message {
   deployId        String?  @unique
   channelDeployId String
   threadId        String?
-  content         String
+  content         String?
   files           String?
   type            Int
   isPinned        Boolean
