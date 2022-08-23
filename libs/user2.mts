@@ -1,5 +1,6 @@
 import { PrismaClient, User } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
+import { v4 as uuidv4 } from "uuid"
 import type { Guild as DiscordClient } from "discord.js"
 import { WebClient as SlackClient } from "@slack/web-api"
 import { ChannelClient } from "./channel2.mjs"
@@ -139,13 +140,35 @@ export class UserClient {
     if (bot) return bot
 
     const result = await slackClient.bots.info({ bot: botId })
-    if (result.bot?.app_id) {
+    if (
+      result.bot !== undefined &&
+      result.bot.app_id !== undefined &&
+      result.bot.name !== undefined &&
+      result.bot.icons?.image_72 !== undefined &&
+      result.bot.deleted !== undefined
+    ) {
       bot = await this.client.user.findFirst({
         where: {
           appId: result.bot.app_id,
           type: 3,
         },
       })
+      if (bot) return bot
+
+      bot = {
+        id: uuidv4(),
+        appId: result.bot.app_id,
+        botId: botId,
+        name: result.bot.name,
+        type: 3,
+        color: parseInt("808080", 16),
+        email: null,
+        imageUrl: result.bot.icons.image_72,
+        isBot: true,
+        isDeleted: result.bot.deleted,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
     }
     return bot
   }
