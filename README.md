@@ -1,15 +1,16 @@
 # MSD CLI
 
-<img src="./docs/img/msd.png" style="margin-left:auto; margin-right:auto; width:200px; display:block;">
+<p align="center">
+  <img src="./docs/img/msd.png" width="300" height="300">
+</p>
 
 SlackからDiscordに移行するためのnode.js製のCLI  
 MSDは(Migrate from Slack to Discord)の略称  
 
 > **Warning**  
-> **このCLIでは、Privateチャンネルの移行は基本的にできません**  
-> このCLIは個人用途に簡易的に作られているため、十分なテストがされていません  
+> **Privateチャンネルの移行は基本的にできません**  
+> このCLIはまだ十分なテストがされていません、動作の保証ができないので、利用する際は自己責任でお願いします  
 > 将来的にSlackやDiscordのAPIの仕様変更によって、使用できなくなる可能性があります  
-> 動作の保証ができないので、利用する際は自己責任でお願いします  
 
 仕組みとしては、SlackのエクスポートデータをDiscordに出力できるデータに変換し、DiscordBot経由でチャンネルの作成とメッセージの出力を行うことで移行を実現します  
 
@@ -45,7 +46,7 @@ flowchart LR
 [初回設定](./docs/initial-setting.md)でBotなどの設定を完了後、下記のコマンドを順次実行して移行します  
 
 ```zsh
-# 作業ディレクトリ初期化、移行用のSQLiteファイル作成を行う
+# 作業ディレクトリ初期化と移行用のSQLiteファイル作成を行う
 npm run init
 
 # チャンネルをデプロイする
@@ -72,7 +73,7 @@ npm run destroy:channel
 ```
 
 移行完了後はBotは不要になるため、念のため削除しておいた方が良いと思います  
-ユーザーの画像をホストするためのチャンネル`#mds-user`は、Discordの仕様上、[CDNにアップロードされたファイルを消えない](https://support.discord.com/hc/en-us/community/posts/360061593771-Privacy-for-CDN-attachements))ようなので、削除しても問題ありません  
+ユーザーの画像をホストするためのチャンネル`#mds-user`は、Discordの仕様上、[CDNにアップロードされたファイルを消えない](https://support.discord.com/hc/en-us/community/posts/360061593771-Privacy-for-CDN-attachements)ようなので、移行完了後は削除しても問題ありません  
 
 ## 主な既知の問題
 
