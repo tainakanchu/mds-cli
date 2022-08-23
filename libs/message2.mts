@@ -170,7 +170,7 @@ export class MessageClient {
       }
 
       // Pagination message
-      const take = 1000
+      const take = 100
       let skip = 0
       const total = await this.client.message.count({
         where: {
@@ -344,7 +344,7 @@ export class MessageClient {
           throw new Error(`Failed to get channel manager of ${channel.id}`)
 
         // Pagination message
-        const take = 1000
+        const take = 100
         let skip = 0
         const total = await this.client.message.count({
           where: {
