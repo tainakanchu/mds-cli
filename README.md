@@ -61,17 +61,17 @@ npm run destroy:channel
 
 ## 主な既知の問題
 
-### [移行速度の高速化とDBの変更](https://github.com/revoltage-inc/cli-mds/issues/37)
+### [移行速度の高速化とDBの変更](https://github.com/revoltage-inc/mds-cli/issues/37)
 
 現在はDBにSQLiteを利用しているため、同時書き込みができない制限で、直列処理でチャンネルにメッセージのデプロイをしているため、移行速度が遅いです  
 同時書き込みができるDBに移行し、並列処理で複数のチャンネルに同時にメッセージのデプロイをできるようにしたいです  
 
-### [Embedの制限を超える文字数のメッセージへの対応](https://github.com/revoltage-inc/cli-mds/issues/13)
+### [Embedの制限を超える文字数のメッセージへの対応](https://github.com/revoltage-inc/mds-cli/issues/13)
 
 DiscordのEmbed(埋め込みメッセージ)の仕様上、1024文字より長いメッセージは送れない制限があります  
 現在は暫定対応として、メッセージを1024文字以内に丸めていますが、メッセージを分割するなどで送信できるように対応したいです  
 
-### [Discordの最大アップロードサイズを超えるファイルへの対応](https://github.com/revoltage-inc/cli-mds/issues/38)
+### [Discordの最大アップロードサイズを超えるファイルへの対応](https://github.com/revoltage-inc/mds-cli/issues/38)
 
 Discordのアップロードファイルの制限値がサーバーブーストしても最大100MBなので、  
 現在最大アップロードサイズを超えるファイルはエクスポートデータのファイルURLを添付するだけになっているので、  
