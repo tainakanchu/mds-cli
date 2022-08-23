@@ -12,6 +12,10 @@ MSDは(Migrate from Slack to Discord)の略称
 > このCLIはまだ十分なテストがされていません、動作の保証ができないので、利用する際は自己責任でお願いします  
 > 将来的にSlackやDiscordのAPIの仕様変更によって、使用できなくなる可能性があります  
 
+<p align="center">
+  <img src="./docs/img/example.png" min-width="600" min-height="540">
+</p>
+
 仕組みとしては、SlackのエクスポートデータをDiscordに出力できるデータに変換し、DiscordBot経由でチャンネルの作成とメッセージの出力を行うことで移行を実現します  
 
 <p align="center">
