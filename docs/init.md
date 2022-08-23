@@ -2,12 +2,26 @@
 
 **移行元のSlackのワークスペース、移行先のDiscordのサーバーがある**前提で、下記の初回設定を順次行ってください  
 
-1. [Voltaのインストール](https://docs.volta.sh/guide/getting-started)
-2. [DiscordBotの作成](#create-discord-bot)
-3. [SlackBotの作成](#create-slack-bot)
-4. [Slackのデータのエクスポート](#export-slack-data)
-5. [環境変数の設定](#setting-environment-variables)
-6. [実行環境の設定](#setting-execution-environment)
+1. [direnvのインストール](#install-direnv)
+2. [Voltaのインストール](#install-volta)
+3. [DiscordBotの作成](#create-discord-bot)
+4. [SlackBotの作成](#create-slack-bot)
+5. [Slackのデータのエクスポート](#export-slack-data)
+6. [環境変数の設定](#setting-environment-variables)
+7. [実行環境の設定](#setting-execution-environment)
+
+<h2 id="install-direnv">direnvのインストール</h2>
+
+Node.jsの[OpenSSLのバージョンアップ](https://nodejs.org/ja/blog/vulnerability/mar-2022-security-releases/)に伴い、まだ動かないライブラリがあるため、OpenSSL3をレガシープロパイダーに戻す環境変数のオプションを有効にさせる必要がある  
+[公式サイトのインストールガイド](https://github.com/direnv/direnv/blob/master/docs/installation.md)に沿って、direnvのインストールを行い、下記コマンドを実行することで、プロジェクトのディレクトリを開いた際に環境変数を自動有効化させる  
+
+```zsh
+direnv allow
+```
+
+<h2 id="install-volta">Voltaのインストール</h2>
+
+Node.jsのバージョン管理のため、[公式サイトのインストールガイド](https://docs.volta.sh/guide/getting-started)に沿ってVoltaをインストールする
 
 <h2 id="create-discord-bot">DiscordBotの作成</h2>
 
