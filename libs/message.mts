@@ -174,6 +174,8 @@ export class MessageClient {
       let skip = 0
       const total = await this.client.message.count({
         where: {
+          // Get only undeployed message for redeploy
+          deployId: { equals: null },
           channelDeployId: channel.deployId,
         },
       })
@@ -182,6 +184,7 @@ export class MessageClient {
           take: take,
           skip: skip,
           where: {
+            deployId: { equals: null },
             channelDeployId: channel.deployId,
           },
           orderBy: {
