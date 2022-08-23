@@ -88,14 +88,17 @@ export class MessageClient {
           // Get attached file
           const files = message.files
             ? JSON.stringify(
-                message.files.map((file) => {
-                  if (!file.url_private || !file.size)
-                    throw new Error("File is missing required parameter")
-                  return {
-                    url: file.url_private,
-                    size: file.size,
-                  } as File
-                })
+                message.files
+                  // Skip deleted file
+                  .filter((file) => file.mode !== "tombstone")
+                  .map((file) => {
+                    if (!file.url_private || !file.size)
+                      throw new Error("File is missing required parameter")
+                    return {
+                      url: file.url_private,
+                      size: file.size,
+                    } as File
+                  })
               )
             : null
 
@@ -112,7 +115,9 @@ export class MessageClient {
           } else if (message.user) {
             author = await this.userClient.getUser(slackClient, message.user)
           }
-          if (!author) throw new Error("Failed to get message author")
+          if (!author) {
+            throw new Error("Failed to get message author")
+          }
 
           newMessages.push({
             timestamp: message.ts,
