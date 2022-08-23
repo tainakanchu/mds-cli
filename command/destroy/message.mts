@@ -1,17 +1,10 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import { resolve, join } from "node:path"
+import type { Guild as DiscordClient } from "discord.js"
 import prompts from "prompts"
-import type { Guild as DiscordClientType } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { getChannelFile } from "../../libs/channel.mjs"
-import type { Channel } from "../../libs/channel.mjs"
-import { deleteAllMessage } from "../../libs/message.mjs"
-
-const __dirname = new URL(import.meta.url).pathname
-const distDirPath = resolve(__dirname, "../../../.dist/")
-const distChannelFilePath = join(distDirPath, "channel.json")
+import { MessageClient } from "../../libs/message.mjs"
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
@@ -22,17 +15,16 @@ interface Options {
 }
 
 ;(async () => {
-  // コマンドの実行確認
   const confirm = await prompts({
     type: "confirm",
     name: "value",
-    message: "Delete message?",
+    message: "Destroy message?",
   })
   if (!confirm.value) process.exit(0)
 
   const program = new Command()
   program
-    .description("Delete message command")
+    .description("Destroy message command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -45,45 +37,33 @@ interface Options {
     )
     .parse(process.argv)
 
-  // パラメーターの取得
   spinner.loading("Check parameter")
   const options: Options = program.opts()
   const { discordBotToken, discordServerId } = options
   if (discordBotToken === undefined || discordServerId === undefined) {
     spinner.failed(null, "Required parameter is not found")
-    process.exit(0)
+    process.exit(1)
   }
   spinner.success()
 
-  // Discordのクライアントを作成する
-  spinner.loading("Create discord client")
-  let discordClient: DiscordClientType | null = null
+  spinner.loading("Create client")
+  let messageClient: MessageClient | undefined = undefined
+  let discordClient: DiscordClient | null = null
   try {
+    messageClient = new MessageClient()
     discordClient = await createDiscordClient(discordBotToken, discordServerId)
   } catch (error) {
     spinner.failed(null, error)
-    process.exit(0)
+    process.exit(1)
   }
   spinner.success()
 
-  // チャンネルを取得する
-  spinner.loading("Get channel")
-  let channels: Channel[] | null = null
+  spinner.loading("Destroy message")
   try {
-    channels = await getChannelFile(distChannelFilePath)
+    await messageClient.destroyAllMessage(discordClient)
   } catch (error) {
     spinner.failed(null, error)
-    process.exit(0)
-  }
-  spinner.success()
-
-  // メッセージを削除する
-  spinner.loading("Delete message")
-  try {
-    await deleteAllMessage(discordClient, channels)
-  } catch (error) {
-    spinner.failed(null, error)
-    process.exit(0)
+    process.exit(1)
   }
   spinner.success()
 

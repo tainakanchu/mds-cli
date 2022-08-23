@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Channel {
+  id               String   @id
+  deployId         String?  @unique
+  name             String
+  categoryDeployId String?
+  type             Int
+  topic            String?
+  isArchived       Boolean
+  pins             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+}
+
+model Category {
+  id        String   @id
+  deployId  String?  @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model User {
+  id        String   @id
+  appId     String?  @unique
+  botId     String?  @unique
+  name      String
+  type      Int
+  color     Int
+  email     String?  @unique
+  imageUrl  String
+  isBot     Boolean
+  isDeleted Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Message {
+  timestamp       String   @id
+  deployId        String?  @unique
+  channelDeployId String
+  threadId        String?
+  content         String?
+  files           String?
+  type            Int
+  isPinned        Boolean
+  isReplyed       Boolean
+  authorId        String
+  authorType      Int
+  authorColor     Int
+  authorName      String
+  authorImageUrl  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+}

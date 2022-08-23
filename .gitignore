@@ -15,3 +15,6 @@ node_modules/
 # Working Directory
 .src/
 .dist/
+
+# Migration Directory
+# prisma/migrations/

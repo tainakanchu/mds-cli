@@ -1,58 +1,56 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
-import type { Guild as DiscordClient } from "discord.js"
+import { resolve } from "node:path"
+import type { WebClient as SlackClient } from "@slack/web-api"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { createDiscordClient } from "../../libs/client.mjs"
 import { MessageClient } from "../../libs/message.mjs"
+import { createSlackClient } from "../../libs/client.mjs"
+
+const __dirname = new URL(import.meta.url).pathname
+const srcDirPath = resolve(__dirname, "../../../.src/")
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
 
 interface Options {
-  discordBotToken?: string
-  discordServerId?: string
+  slackBotToken?: string
 }
 
 ;(async () => {
   const program = new Command()
   program
-    .description("Deploy messsage command")
+    .description("Migrate message command")
     .requiredOption(
-      "-dt, --discord-bot-token [string]",
-      "DiscordBot OAuth Token",
-      process.env.DISCORD_BOT_TOKEN
-    )
-    .requiredOption(
-      "-ds, --discord-server-id [string]",
-      "Discord Server ID",
-      process.env.DISCORD_SERVER_ID
+      "-st, --slack-bot-token [string]",
+      "SlackBot OAuth Token",
+      process.env.SLACK_BOT_TOKEN
     )
     .parse(process.argv)
 
   spinner.loading("Check parameter")
   const options: Options = program.opts()
-  const { discordBotToken, discordServerId } = options
-  if (discordBotToken === undefined || discordServerId === undefined) {
+  const { slackBotToken } = options
+  if (slackBotToken === undefined) {
     spinner.failed(null, "Required parameter is not found")
-    process.exit(1)
+    process.exit(0)
   }
   spinner.success()
 
   spinner.loading("Create client")
   let messageClient: MessageClient | undefined = undefined
-  let discordClient: DiscordClient | undefined = undefined
+  let slackClient: SlackClient | undefined = undefined
   try {
     messageClient = new MessageClient()
-    discordClient = await createDiscordClient(discordBotToken, discordServerId)
+    slackClient = createSlackClient(slackBotToken)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)
   }
   spinner.success()
 
-  spinner.loading("Deploy message")
+  spinner.loading("Migrate message")
   try {
-    await messageClient.deployAllMessage(discordClient)
+    await messageClient.migrateAllMessage(slackClient, srcDirPath)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)

@@ -1,248 +1,295 @@
-import { access, readFile, writeFile, mkdir, constants } from "node:fs/promises"
-import { dirname } from "node:path"
+import { PrismaClient, User } from "@prisma/client"
+import { access, readFile, constants } from "node:fs/promises"
+import { v4 as uuidv4 } from "uuid"
+import type { Guild as DiscordClient } from "discord.js"
 import { WebClient as SlackClient } from "@slack/web-api"
-import { Member as SlackUser } from "@slack/web-api/dist/response/UsersListResponse"
-import { ChannelType } from "discord.js"
-import type { Guild as DiscordClientType } from "discord.js"
-import retry from "async-retry"
-import { createChannelFile } from "./channel.mjs"
-import type { Channel } from "./channel.mjs"
+import { ChannelClient } from "./channel.mjs"
 
-export interface User {
-  id: string
-  name: string
-  image_url: string
-  src: {
-    id: string
-    name: string
-    color: string | "808080"
-    image_url: string
-    is_bot: boolean
-    is_deleted: boolean
-    bot?: {
-      id?: string
-      app_id?: string
-    }
+interface SlackUserChannelFile {
+  id?: string
+  is_bot?: boolean
+  deleted?: boolean
+  color?: string
+  profile?: {
+    bot_id?: string
+    api_app_id?: string
+    real_name?: string
+    display_name?: string
+    email?: string
+    image_512?: string
   }
 }
 
-/**
- * Get user data
- * @param slackClient
- * @param userId
- */
-export const getUser = async (
-  slackClient: SlackClient,
-  userId: string
-): Promise<User> => {
-  const result = await retry(
-    async () => await slackClient.users.info({ user: userId })
-  )
-
-  // ユーザーの必須項目がない場合は例外を投げる
-  if (
-    result.user?.id === undefined ||
-    result.user?.name === undefined ||
-    result.user?.color === undefined ||
-    result.user?.profile?.image_512 === undefined ||
-    result.user?.is_bot === undefined ||
-    result.user?.deleted === undefined
-  ) {
-    throw new Error("User is missing a required parameter")
+export class UserClient {
+  client: PrismaClient
+  channelClient: ChannelClient
+  constructor(client = new PrismaClient()) {
+    this.client = client
+    this.channelClient = new ChannelClient(this.client)
   }
 
-  const bot = result.user.is_bot
-    ? {
-        id: result.user?.profile?.bot_id,
-        app_id: result.user?.profile?.api_app_id,
-      }
-    : undefined
+  /**
+   * Migrate user data
+   * @param userFilePath
+   */
+  async migrateUser(userFilePath: string) {
+    const slackUsers = await this.getSlackUserFile(userFilePath)
 
-  const user: User = {
-    id: "",
-    name: "",
-    image_url: "",
-    src: {
-      id: result.user.id,
-      name: result.user.name,
-      color: result.user.color,
-      image_url: result.user.profile?.image_512,
-      is_bot: result.user.is_bot,
-      is_deleted: result.user.deleted,
-      bot: bot,
-    },
-  }
+    // Convert user data
+    const newUsers: User[] = slackUsers.map((user) => {
+      if (
+        user.id === undefined ||
+        user.is_bot === undefined ||
+        user.deleted === undefined ||
+        user.profile === undefined ||
+        user.profile.real_name === undefined ||
+        user.profile.display_name === undefined ||
+        user.profile.image_512 === undefined
+      )
+        throw new Error("User is missing required parameter")
 
-  return user
-}
-
-/**
- * Get username
- * @param slackClient
- * @param userId
- */
-export const getUsername = async (
-  slackClient: SlackClient,
-  userId: string
-): Promise<string | null> => {
-  const result = await retry(
-    async () => await slackClient.users.info({ user: userId })
-  )
-  return result.user?.name || null
-}
-
-/**
- * Get user
- * @param distUserFilePath
- */
-export const getUserFile = async (
-  distUserFilePath: string
-): Promise<User[]> => {
-  await access(distUserFilePath, constants.R_OK)
-  const users = JSON.parse(await readFile(distUserFilePath, "utf8")) as User[]
-  return users
-}
-
-/**
- * Create user file
- * @param distUserFilePath
- * @param users
- */
-export const createUserFile = async (
-  distUserFilePath: string,
-  users: User[]
-): Promise<void> => {
-  await mkdir(dirname(distUserFilePath), {
-    recursive: true,
-  })
-  await writeFile(distUserFilePath, JSON.stringify(users, null, 2))
-}
-
-/**
- * Build user
- * @param srcUserFilePath
- * @param distUserFilePath
- */
-export const buildUser = async (
-  srcUserFilePath: string,
-  distUserFilePath: string
-): Promise<void> => {
-  await access(srcUserFilePath, constants.R_OK)
-  const usersFile = await readFile(srcUserFilePath, "utf8")
-  const users = (JSON.parse(usersFile) as SlackUser[]).map((user) => {
-    // ユーザーの必須項目がない場合は例外を投げる
-    if (
-      user.id === undefined ||
-      user.profile?.real_name === undefined ||
-      user.profile?.display_name === undefined ||
-      user.is_bot === undefined ||
-      user.deleted === undefined ||
-      user.profile?.image_512 === undefined
-    ) {
-      throw new Error("User is missing a required parameter")
-    }
-
-    // ユーザー名もしくはBot名を取得
-    const name = user.is_bot
-      ? user.profile?.real_name
-      : user.profile?.display_name
-
-    // ユーザーがBotの場合はBot情報を取得
-    const bot: User["src"]["bot"] = user.is_bot
-      ? { id: user.profile?.bot_id, app_id: user.profile?.api_app_id }
-      : undefined
-
-    const newUser: User = {
-      id: "",
-      name: name,
-      image_url: "",
-      src: {
+      return {
         id: user.id,
-        name: name,
-        is_bot: user.is_bot,
-        is_deleted: user.deleted,
-        color: user.color || "808080",
-        image_url: user.profile.image_512,
-        bot: bot,
-      },
-    }
-
-    return newUser
-  })
-
-  // ユーザーファイルを作成する
-  await createUserFile(distUserFilePath, users)
-}
-
-/**
- * Deploy user image
- * @param discordClient
- * @param distChannelFilePath
- * @param channels
- * @param archiveCategoryId
- * @param distUserFilePath
- * @param users
- */
-export const deployUserImage = async (
-  discordClient: DiscordClientType,
-  distChannelFilePath: string,
-  channels: Channel[],
-  archiveCategoryId: string,
-  distUserFilePath: string,
-  users: User[]
-): Promise<void> => {
-  // ユーザーのイメージをアップロードするためのチャンネルを作成
-  const userChannel = await discordClient.channels.create({
-    name: "mds-user",
-    type: ChannelType.GuildText,
-    topic: "channel for hosting user image",
-    parent: archiveCategoryId,
-  })
-
-  // チャンネルに画像をアップロード
-  const newUsers: User[] = []
-  for (const user of users) {
-    const message = await userChannel.send({
-      content: user.src.name,
-      files: [user.src.image_url],
+        appId: user.profile.api_app_id || null,
+        botId: user.profile.bot_id || null,
+        name: user.is_bot ? user.profile.real_name : user.profile.display_name,
+        type: user.is_bot
+          ? 3 // Bot
+          : user.deleted
+          ? 2 // Cancel user
+          : 1, // Active user
+        color: user.color ? parseInt(user.color, 16) : parseInt("808080", 16),
+        email: user.profile.email || null,
+        imageUrl: user.profile.image_512,
+        isBot: user.is_bot,
+        isDeleted: user.deleted,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
     })
-
-    // 画像のリンクを取得
-    const imageUrl = message.attachments.map((file) => file.url)[0]
-    const newUser = (() => user)()
-    newUser.image_url = imageUrl
-
-    newUsers.push(newUser)
+    await this.updateManyUser(newUsers)
   }
 
-  //ユーザーファイルを更新
-  await createUserFile(distUserFilePath, newUsers)
+  /**
+   * Get user
+   * @param userId
+   */
+  async getUser(slackClient: SlackClient, userId: string) {
+    let user: User | null = null
 
-  // チャンネルファイルを更新
-  const newChannels: Channel[] = [
-    ...channels,
-    ...([
-      {
-        id: userChannel.id,
-        name: userChannel.name,
-        type: "user_image_host",
-        guild: {
-          boost_level: 0,
-          boost_count: 0,
-          max_file_size: 8000000,
-        },
-        topic: "",
-        message_file_paths: [],
-        src: {
-          id: "",
-          name: "",
-          is_archived: true,
-          purpose: "",
-          pin_ids: [],
-          message_file_paths: [],
-        },
+    // Get slack bot
+    user = await this.client.user.findFirst({
+      where: {
+        id: userId,
       },
-    ] as Channel[]),
-  ]
-  await createChannelFile(distChannelFilePath, newChannels)
+      orderBy: {
+        updatedAt: "desc",
+      },
+    })
+    if (user) return user
+
+    // Get slack user from API
+    const result = await slackClient.users.info({ user: userId })
+    if (
+      result.user?.id === undefined ||
+      result.user.profile?.real_name === undefined ||
+      result.user.profile?.display_name === undefined ||
+      result.user?.color === undefined ||
+      result.user?.profile?.image_512 === undefined ||
+      result.user?.is_bot === undefined ||
+      result.user?.deleted === undefined
+    )
+      return null
+
+    user = {
+      id: result.user.id,
+      appId: result.user.profile.api_app_id || null,
+      botId: result.user.profile.bot_id || null,
+      name: result.user.is_bot
+        ? result.user.profile.real_name
+        : result.user.profile.display_name,
+      type: result.user.deleted ? 2 : 1,
+      color: result.user.color
+        ? parseInt(result.user.color, 16)
+        : parseInt("808080", 16),
+      email: result.user.profile.email || null,
+      imageUrl: result.user?.profile.image_512,
+      isBot: result.user.is_bot,
+      isDeleted: result.user?.deleted,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    return user
+  }
+
+  /**
+   * Get bot
+   * @param botId
+   */
+  async getBot(slackClient: SlackClient, botId: string, appId?: string) {
+    let bot: User | null = null
+
+    bot = await this.client.user.findFirst({
+      where: {
+        botId: appId ? undefined : botId,
+        appId: appId,
+        type: 3,
+      },
+    })
+    if (bot) return bot
+
+    const result = await slackClient.bots.info({ bot: botId })
+    if (
+      result.bot !== undefined &&
+      result.bot.app_id !== undefined &&
+      result.bot.name !== undefined &&
+      result.bot.icons?.image_72 !== undefined &&
+      result.bot.deleted !== undefined
+    ) {
+      bot = await this.client.user.findFirst({
+        where: {
+          appId: result.bot.app_id,
+          type: 3,
+        },
+      })
+      if (bot) return bot
+
+      bot = {
+        id: uuidv4(),
+        appId: result.bot.app_id,
+        botId: botId,
+        name: result.bot.name,
+        type: 3,
+        color: parseInt("808080", 16),
+        email: null,
+        imageUrl: result.bot.icons.image_72,
+        isBot: true,
+        isDeleted: result.bot.deleted,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }
+    return bot
+  }
+
+  /**
+   * Get username
+   * @param userId
+   */
+  async getUsername(userId: string) {
+    const user = await this.client.user.findFirst({
+      where: {
+        id: userId,
+      },
+    })
+    return user ? user.name : null
+  }
+
+  /**
+   * Get slack user file
+   * @param userFilePath
+   */
+  async getSlackUserFile(userFilePath: string) {
+    await access(userFilePath, constants.R_OK)
+    return JSON.parse(
+      await readFile(userFilePath, "utf8")
+    ) as SlackUserChannelFile[]
+  }
+
+  /**
+   * Update many user data
+   * @param users
+   */
+  async updateManyUser(users: User[]) {
+    const query = users.map((user) =>
+      this.client.user.upsert({
+        where: {
+          id: user.id,
+        },
+        update: {
+          id: user.id,
+          appId: user.appId,
+          botId: user.botId,
+          name: user.name,
+          type: user.type,
+          color: user.color,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          isBot: user.isBot,
+          isDeleted: user.isDeleted,
+        },
+        create: {
+          id: user.id,
+          appId: user.appId,
+          botId: user.botId,
+          name: user.name,
+          type: user.type,
+          color: user.color,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          isBot: user.isBot,
+          isDeleted: user.isDeleted,
+        },
+      })
+    )
+    await this.client.$transaction([...query])
+  }
+
+  /**
+   * Deploy channel for hosting user image
+   */
+  async deployUserImageChannel(discordClient: DiscordClient) {
+    // Deploy channel for hosting user image
+    const userChannel = await this.channelClient.deployChannel(
+      discordClient,
+      "mds-user",
+      "C0000000000",
+      {
+        channelType: 2,
+        topic: "channel for hosting user image",
+        isArchived: true,
+      }
+    )
+
+    // Get all user data
+    const users = await this.client.user.findMany()
+
+    // Deploy all user image
+    const newUsers: User[] = []
+    for (const user of users) {
+      const message = await userChannel.send({
+        content: user.name,
+        files: [user.imageUrl],
+      })
+      newUsers.push({
+        id: user.id,
+        appId: user.appId,
+        botId: user.botId,
+        type: user.type,
+        color: user.color,
+        name: user.name,
+        email: user.email,
+        imageUrl: message.attachments.map((file) => file.url)[0],
+        isBot: user.isBot,
+        isDeleted: user.isDeleted,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+    await this.updateManyUser(newUsers)
+  }
+
+  /**
+   * Destroy channel for hosting user image
+   */
+  async destroyUserImageChannel(discordClient: DiscordClient) {
+    const userChannel = await this.channelClient.getChannel("mds-user", 2)
+    if (!userChannel || !userChannel.deployId)
+      throw new Error("Failed to get deployed channel for hosting user image")
+
+    // TODO: Destroy all message for channel for hosting user image
+
+    await this.channelClient.destroyChannel(discordClient, userChannel)
+  }
 }
