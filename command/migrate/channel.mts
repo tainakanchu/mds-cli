@@ -13,14 +13,7 @@ const spinner = new Spinner()
 
 ;(async () => {
   const program = new Command()
-  program
-    .description("Migrate channel command")
-    .requiredOption(
-      "-ma, --migrate-archive [boolean]",
-      "Whether to migrate archive channel",
-      process.env.MIGRATE_ARCHIVE === "true" ? true : false
-    )
-    .parse(process.argv)
+  program.description("Migrate channel command").parse(process.argv)
 
   spinner.loading("Create client")
   let channelClient: ChannelClient | undefined = undefined

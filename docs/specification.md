@@ -54,8 +54,6 @@ Consider releasing the maximum file upload size limit with Discord's server boos
 
 Discordにはチャンネルのアーカイブ機能がないため、アーカイブされたチャンネルはARCHIVEカテゴリーにまとめ、それ以外のチャンネルはCHANNELカテゴリーにまとめる仕様となっています  
 
-アーカイブされたチャンネルを移行したくない場合は、`.env`ファイルのMIGRATE_ARCHIVEの環境変数の値に「"false"」を設定してからチャンネルファイルビルドコマンドを実行してください  
-
 ## メッセージの形式
 
 Discordに表示されるメッセージの形式は下記のようになっています  

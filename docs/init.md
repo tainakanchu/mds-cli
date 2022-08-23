@@ -46,7 +46,6 @@ export NODE_OPTIONS=--openssl-legacy-provider # 使用中のライブラリの O
 export SLACK_BOT_TOKEN="" # SlackBotのトークン
 export DISCORD_BOT_TOKEN="" # DiscordBotのトークン
 export DISCORD_SERVER_ID="" # DiscordのサーバーID
-export MIGRATE_ARCHIVE="true" # アーカイブされたチャンネルを移行するかどうか
 ```
 
 <h2 id="setting-execution-environment">実行環境の設定</h2>
