@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import type { Guild as DiscordClient } from "discord.js"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { UserClient } from "../../libs/user2.mjs"
+import { UserClient } from "../../libs/user.mjs"
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()

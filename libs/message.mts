@@ -12,8 +12,8 @@ import type {
   APIEmbed as Embed,
   Message as MessageManager,
 } from "discord.js"
-import { ChannelClient } from "./channel2.mjs"
-import { UserClient } from "./user2.mjs"
+import { ChannelClient } from "./channel.mjs"
+import { UserClient } from "./user.mjs"
 
 interface SlackMessageFile {
   type?: "message"

@@ -2,7 +2,7 @@ import { PrismaClient, Channel } from "@prisma/client"
 import { access, readFile, constants } from "node:fs/promises"
 import { ChannelType, DiscordAPIError } from "discord.js"
 import type { Guild as DiscordClient } from "discord.js"
-import { CategoryClient } from "./category2.mjs"
+import { CategoryClient } from "./category.mjs"
 
 interface SlackChannelFile {
   id?: string

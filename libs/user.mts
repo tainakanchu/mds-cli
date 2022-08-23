@@ -3,7 +3,7 @@ import { access, readFile, constants } from "node:fs/promises"
 import { v4 as uuidv4 } from "uuid"
 import type { Guild as DiscordClient } from "discord.js"
 import { WebClient as SlackClient } from "@slack/web-api"
-import { ChannelClient } from "./channel2.mjs"
+import { ChannelClient } from "./channel.mjs"
 
 interface SlackUserChannelFile {
   id?: string

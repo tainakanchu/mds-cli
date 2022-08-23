@@ -2,7 +2,7 @@ import { Command } from "commander"
 import dotenv from "dotenv"
 import { resolve, join } from "node:path"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { UserClient } from "../../libs/user2.mjs"
+import { UserClient } from "../../libs/user.mjs"
 
 const __dirname = new URL(import.meta.url).pathname
 const srcDirPath = resolve(__dirname, "../../../.src/")

@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import { resolve } from "node:path"
 import type { WebClient as SlackClient } from "@slack/web-api"
 import { Spinner } from "../../libs/util/spinner.mjs"
-import { MessageClient } from "../../libs/message2.mjs"
+import { MessageClient } from "../../libs/message.mjs"
 import { createSlackClient } from "../../libs/client.mjs"
 
 const __dirname = new URL(import.meta.url).pathname

@@ -1,10 +1,9 @@
 import { Command } from "commander"
 import dotenv from "dotenv"
 import type { Guild as DiscordClient } from "discord.js"
-import prompts from "prompts"
 import { Spinner } from "../../libs/util/spinner.mjs"
 import { createDiscordClient } from "../../libs/client.mjs"
-import { UserClient } from "../../libs/user2.mjs"
+import { ChannelClient } from "../../libs/channel.mjs"
 
 dotenv.config({ path: "./.env" })
 const spinner = new Spinner()
@@ -15,16 +14,9 @@ interface Options {
 }
 
 ;(async () => {
-  const confirm = await prompts({
-    type: "confirm",
-    name: "value",
-    message: "Destroy channel for hosting user image?",
-  })
-  if (!confirm.value) process.exit(0)
-
   const program = new Command()
   program
-    .description("Destroy channel for hosting user image command")
+    .description("Deploy channel command")
     .requiredOption(
       "-dt, --discord-bot-token [string]",
       "DiscordBot OAuth Token",
@@ -47,10 +39,10 @@ interface Options {
   spinner.success()
 
   spinner.loading("Create client")
-  let userClient: UserClient | undefined = undefined
+  let channelClient: ChannelClient | undefined = undefined
   let discordClient: DiscordClient | undefined = undefined
   try {
-    userClient = new UserClient()
+    channelClient = new ChannelClient()
     discordClient = await createDiscordClient(discordBotToken, discordServerId)
   } catch (error) {
     spinner.failed(null, error)
@@ -58,9 +50,9 @@ interface Options {
   }
   spinner.success()
 
-  spinner.loading("Destroy channel for hosting user image")
+  spinner.loading("Deploy channel")
   try {
-    await userClient.destroyUserImageChannel(discordClient)
+    await channelClient.deployAllChannel(discordClient)
   } catch (error) {
     spinner.failed(null, error)
     process.exit(1)
