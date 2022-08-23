@@ -45,26 +45,25 @@ flowchart LR
 [初回設定](./docs/initial-setting.md)を完了後、下記のコマンドを順次実行して移行します  
 
 ```zsh
-# チャンネル、ユーザー、メッセージの移行ファイルを作成する
-npm run build
-# or
+# 作業ディレクトリ初期化、移行用のSQLiteファイル作成を行う
 npm run init
-npm run build:channel
-npm run build:user
-npm run build:message
 
-# チャンネル、メッセージを作成する
-npm run deploy
-# or
+# チャンネルをデプロイする
+npm run migrate:channel
 npm run deploy:channel
+
+# ユーザーの画像をホストするためのチャンネルをデプロイする
+npm run migrate:user
 npm run deploy:user
+
+# メッセージをデプロイする
+npm run migrate:message
 npm run deploy:message
 ```
 
 移行した内容を元に戻す場合は、下記のコマンドを実行することでリセットできます  
 
 ```zsh
-# チャンネル、メッセージを削除する
 npm run destroy
 # or
 npm run destroy:user
