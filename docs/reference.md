@@ -18,3 +18,4 @@
 - [Discord Embed Builder]([Discord Embed Builder](https://autocode.com/tools/discord/embed-builder/))
 - [Prisma](https://www.prisma.io/)
 - [Prisma SQLite](https://www.prisma.io/docs/concepts/database-connectors/sqlite)
+- [Privacy for CDN attachements](https://support.discord.com/hc/en-us/community/posts/360061593771-Privacy-for-CDN-attachements)
