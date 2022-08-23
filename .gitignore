@@ -17,4 +17,4 @@ node_modules/
 .dist/
 
 # Migration Directory
-prisma/migrations/
+# prisma/migrations/
