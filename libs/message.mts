@@ -256,6 +256,8 @@ export class MessageClient {
 
     const newMessage = (() => message)()
     let messageManager: MessageManager | undefined = undefined
+
+    // Whether it is reply message
     if (message.isReplyed && message.threadId) {
       const threadMessage = await this.client.message.findFirst({
         where: {
@@ -282,7 +284,8 @@ export class MessageClient {
     // Deploy attached file as separate message so that attached file show below embed
     if (message.files) {
       const files = JSON.parse(message.files) as File[]
-      await this.deployManyFile(channelManager, message, files, maxFileSize)
+      if (files.length)
+        await this.deployManyFile(channelManager, message, files, maxFileSize)
     }
 
     // Deploy pinned item
