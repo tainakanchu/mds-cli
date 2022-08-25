@@ -22,11 +22,11 @@ direnv allow
 
 <h2 id="install-volta">Voltaのインストール</h2>
 
-Node.jsのバージョン管理のため、[公式サイトのインストールガイド](https://docs.volta.sh/guide/getting-started)に沿ってVoltaをインストールする
+Node.jsのバージョン管理のため、[公式サイトのスタートガイド](https://docs.volta.sh/guide/getting-started)に沿ってVoltaをインストールする
 
 <h2 id="create-discord-bot">DiscordBotの作成</h2>
 
-1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[Botアカウント作成](https://discordpy.readthedocs.io/ja/latest/discord.html#creating-a-bot-account)」」などの記事を参考に任意の名前のBotを作成
+1. [DiscordのDeveloper Portalのページ](https://discord.com/developers/applications)で、「[公式サイトのスタートガイド](https://discord.com/developers/docs/getting-started)」などの記事を参考に任意の名前のBotを作成
 2. Public Botのチェックを外し、DiscordBotを公開にしておく
 3. OAuth2 > URL GeneratorでSCOPESの項目では「Bot」を、Bot Permissionsの項目では「Send Messages」、「Manage Channels」、「Manage Messages」にチェックを入れる
 4. GENERATED URLの項目で生成されたURLを開いて、移行先のDiscordサーバーにDiscordBotを追加する
@@ -36,7 +36,7 @@ Node.jsのバージョン管理のため、[公式サイトのインストール
 
 <h2 id="create-slack-bot">SlackBotの作成</h2>
 
-1. [Your Appsのページ](https://api.slack.com/apps)で、「[ワークスペースで利用するボットの作成](https://slack.com/intl/ja-jp/help/articles/115005265703-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%A7%E5%88%A9%E7%94%A8%E3%81%99%E3%82%8B%E3%83%9C%E3%83%83%E3%83%88%E3%81%AE%E4%BD%9C%E6%88%90)」などの記事を参考に任意の名前のSlackBotを作成
+1. [Your Appsのページ](https://api.slack.com/apps)で、「[公式サイトのヘルプガイド](https://slack.com/intl/ja-jp/help/articles/115005265703-%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%A7%E5%88%A9%E7%94%A8%E3%81%99%E3%82%8B%E3%83%9C%E3%83%83%E3%83%88%E3%81%AE%E4%BD%9C%E6%88%90)」などの記事を参考に任意の名前のSlackBotを作成
 2. Features > OAuth & Permissions > ScopesでBot Token Scopesの項目に「users:read」を追加する
 3. Install Appで移行元のワークスペースにSlackBotを追加する
 4. Bot User OAuth Tokenの項目にあるSlackBotのトークンを控えておく

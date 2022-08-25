@@ -15,7 +15,7 @@ Discordの最大ファイルアップロードサイズを超えたメッセー�
 
 ## 移行できない項目
 
-- Privateチャンネル <span style="color:crimson;">※1</span>
+- **Privateチャンネル** <span style="color:crimson;">※1</span>
 - チャンネルの関連ページ
 - チャンネルの説明
 - カスタムセクション <span style="color:crimson;">※2</span>
